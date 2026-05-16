@@ -1,6 +1,6 @@
 // frontend/js/api.js
 const API = {
-    baseURL: 'http://localhost:8080/api',
+    baseURL: 'https://clinique-hoteliere-et-actions.onrender.com/api',
 
     getToken() {
         return localStorage.getItem('token');
