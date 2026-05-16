@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personnel - Hôpital Saint-Jean</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/js/api.js"></script>
+</head>
+
+<body>
+    <nav class="navbar-custom" style="background: #8e44ad;">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand"><i class="fas fa-users"></i> Personnel</span>
+            <button class="btn btn-light btn-sm" onclick="window.location.href='dashboard-admin.html'">Retour</button>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Liste du personnel</h2>
+            <button class="btn btn-primary" onclick="window.location.href='ajout-personnel.html'">
+                <i class="fas fa-plus"></i> Nouveau personnel
+            </button>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 py-4">
+        <h2>Liste du personnel</h2>
+        <div id="personnelList" class="loading-container mt-4">
+            <div class="loading-spinner"></div>
+            <p>Chargement...</p>
+        </div>
+    </div>
+
+    <script>
+        (async function () {
+            try {
+                const personnel = await API.get('/personnel');
+                const container = document.getElementById('personnelList');
+                if (personnel.length) {
+                    container.innerHTML = personnel.map(p => `
+                        <div class="consultation-card mb-2">
+                            <strong>${p.nom} ${p.prenom}</strong><br>
+                            Poste : ${p.poste}<br>
+                            Email : ${p.email}<br>
+                            Tél : ${p.telephone || 'Non renseigné'}<br>
+                            <span class="badge-custom badge-${p.statut === 'actif' ? 'success' : 'danger'}">${p.statut}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="text-muted">Aucun personnel trouvé.</p>';
+                }
+            } catch (e) {
+                document.getElementById('personnelList').innerHTML = '<p class="text-danger">Erreur chargement.</p>';
+            }
+        })();
+    </script>
+</body>
+
+</html>

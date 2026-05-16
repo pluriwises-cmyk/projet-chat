@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clinique hospitaliaire et actions touristiques (CHAT) - Soins d'excellence</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <!-- AOS Animation -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            overflow-x: hidden;
+        }
+
+        /* ===== SECTION PUBLIQUE (MARKETING) ===== */
+        .hero-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .hero-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,...') no-repeat bottom;
+            opacity: 0.1;
+        }
+
+        .navbar {
+            background: transparent !important;
+            padding: 20px 0;
+            transition: all 0.3s;
+        }
+
+        .navbar.scrolled {
+            background: white !important;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: white !important;
+        }
+
+        .navbar.scrolled .navbar-brand {
+            color: #2c3e50 !important;
+        }
+
+        .nav-link {
+            color: white !important;
+            font-weight: 500;
+            margin: 0 15px;
+        }
+
+        .navbar.scrolled .nav-link {
+            color: #2c3e50 !important;
+        }
+
+        .btn-access {
+            background: white;
+            color: #2c3e50 !important;
+            border-radius: 50px;
+            padding: 10px 30px !important;
+            font-weight: 600;
+        }
+
+        .hero-content {
+            padding: 150px 0 100px;
+            color: white;
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-title {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+        }
+
+        .hero-subtitle {
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.95;
+        }
+
+        /* Cartes services */
+        .service-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s;
+            height: 100%;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .service-card:hover {
+            transform: translateY(-10px);
+        }
+
+        .service-icon {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: white;
+            margin: 0 auto 20px;
+        }
+
+        /* Stats */
+        .stats-section {
+            padding: 80px 0;
+            background: #f8f9fa;
+        }
+
+        .stat-item {
+            text-align: center;
+            padding: 30px;
+        }
+
+        .stat-number {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        /* Témoignages */
+        .testimonial-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Footer */
+        .footer {
+            background: #2c3e50;
+            color: white;
+            padding: 50px 0 20px;
+        }
+
+        /* ===== MODAL CONNEXION ===== */
+        .modal-content {
+            border-radius: 20px;
+            border: none;
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 20px 20px 0 0;
+            padding: 30px;
+        }
+
+        .modal-body {
+            padding: 30px;
+        }
+
+        .btn-whatsapp {
+            background: #25D366;
+            color: white;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+
+        .btn-whatsapp:hover {
+            background: #128C7E;
+            transform: translateY(-2px);
+        }
+
+        .separator {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .separator::before,
+        .separator::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 45%;
+            height: 1px;
+            background: #e0e0e0;
+        }
+
+        .separator::before {
+            left: 0;
+        }
+
+        .separator::after {
+            right: 0;
+        }
+
+        .separator span {
+            background: white;
+            padding: 0 10px;
+            color: #999;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: 10px;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            margin-bottom: 15px;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .login-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        /* Profils multiples */
+        .profil-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .profil-option {
+            text-align: center;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .profil-option:hover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .profil-option.selected {
+            border-color: #667eea;
+            background: #e8e8ff;
+        }
+
+        .profil-option i {
+            font-size: 1.5rem;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .profil-option span {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-heartbeat me-2"></i>
+                Clinique hopitaliaire <br> et actions touristiques (CHAT)
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="#accueil">Accueil</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#services">Services</a></li>
+                    <li class="nav-item"><a class="nav-link" href="specialistes.html">Spécialistes</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#footer">Contact</a></li>
+                    <li class="nav-item">
+                        <a class="nav-link btn-access" href="#" data-bs-toggle="modal" data-bs-target="#loginModal">
+                            <i class="fas fa-lock me-2"></i>Espace Personnel
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section (Public) -->
+    <section id="accueil" class="hero-section">
+        <div class="container hero-content">
+            <div class="row align-items-center">
+                <div class="col-lg-6" data-aos="fade-right">
+                    <h1 class="hero-title">Votre santé, notre mission</h1>
+                    <p class="hero-subtitle">
+                        Clinique hopitaliaire et actions touristiques (CHAT) vous offre des soins de qualité avec une équipe de spécialistes dévoués
+                        et des équipements de pointe. Urgences 24h/24, télémédecine, et suivi personnalisé.
+                    </p>
+                    <div class="d-flex gap-3">
+                        <a href="connexion-whatsapp.html" class="btn btn-light btn-lg rounded-pill px-4">
+                           <i class="fas fa-calendar-check me-2"></i>Prendre RDV
+                        </a>
+                        <a href="#services" class="btn btn-outline-light btn-lg rounded-pill px-4">
+                            <i class="fas fa-chevron-down me-2"></i>Découvrir
+                        </a>
+                    </div>
+                </div>
+                <div class="col-lg-6" data-aos="fade-left">
+                    <img src="/images/logo udlHHH.png"
+                        alt="Télémédecine" class="img-fluid rounded-4">
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Services Section -->
+    <section id="services" class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold text-primary">Nos Services</h2>
+                <p class="lead">Des soins complets pour toute la famille</p>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-4" data-aos="fade-up">
+                    <div class="service-card">
+                        <div class="service-icon">
+                            <i class="fas fa-stethoscope"></i>
+                        </div>
+                        <h3>Consultations</h3>
+                        <p>Consultations généralistes et spécialisées avec nos médecins expérimentés.</p>
+                        <a href="#" class="text-decoration-none">En savoir plus <i
+                                class="fas fa-arrow-right ms-2"></i></a>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="100">
+                    <div class="service-card">
+                        <div class="service-icon">
+                            <i class="fas fa-ambulance"></i>
+                        </div>
+                        <h3>Urgences 24/7</h3>
+                        <p>Service d'urgences ouvert 24h/24, 7j/7 avec une équipe dédiée.</p>
+                        <a href="#" class="text-decoration-none">En savoir plus <i
+                                class="fas fa-arrow-right ms-2"></i></a>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4" data-aos="fade-up" data-aos-delay="200">
+                    <div class="service-card">
+                        <div class="service-icon">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <h3>Télémédecine</h3>
+                        <p>Consultations à distance via notre plateforme sécurisée.</p>
+                        <a href="#" class="text-decoration-none">En savoir plus <i
+                                class="fas fa-arrow-right ms-2"></i></a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats-section">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-3 stat-item" data-aos="zoom-in">
+                    <div class="stat-number">50K+</div>
+                    <div class="stat-label">Patients satisfaits</div>
+                </div>
+                <div class="col-md-3 stat-item" data-aos="zoom-in" data-aos-delay="100">
+                    <div class="stat-number">150+</div>
+                    <div class="stat-label">Médecins spécialistes</div>
+                </div>
+                <div class="col-md-3 stat-item" data-aos="zoom-in" data-aos-delay="200">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">Service d'urgences</div>
+                </div>
+                <div class="col-md-3 stat-item" data-aos="zoom-in" data-aos-delay="300">
+                    <div class="stat-number">98%</div>
+                    <div class="stat-label">Taux de satisfaction</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Testimonials -->
+    <section class="py-5">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="display-5 fw-bold text-primary">Ce que disent nos patients</h2>
+            </div>
+
+            <div class="row">
+                <div class="col-md-4 mb-4" data-aos="fade-right">
+                    <div class="testimonial-card">
+                        <i class="fas fa-quote-left text-primary mb-3" style="font-size: 2rem;"></i>
+                        <p>Une équipe formidable, des soins de qualité. Je recommande vivement !</p>
+                        <div class="d-flex align-items-center mt-3">
+                            <div class="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center"
+                                style="width: 50px; height: 50px;">MD</div>
+                            <div class="ms-3">
+                                <strong>moulay rachid houcine</strong>
+                                <div class="text-muted small">Patient cardiologie</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4" data-aos="fade-up">
+                    <div class="testimonial-card">
+                        <i class="fas fa-quote-left text-primary mb-3" style="font-size: 2rem;"></i>
+                        <p>La télémédecine m'a sauvé la vie. Rapide, efficace et sécurisé.</p>
+                        <div class="d-flex align-items-center mt-3">
+                            <div class="bg-success text-white rounded-circle d-flex align-items-center justify-content-center"
+                                style="width: 50px; height: 50px;">FS</div>
+                            <div class="ms-3">
+                                <strong>fentous abd er rahim</strong>
+                                <div class="text-muted small">Patient télémédecine</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 mb-4" data-aos="fade-left">
+                    <div class="testimonial-card">
+                        <i class="fas fa-quote-left text-primary mb-3" style="font-size: 2rem;"></i>
+                        <p>Service d'urgences réactif et professionnel. Merci à toute l'équipe.</p>
+                        <div class="d-flex align-items-center mt-3">
+                            <div class="bg-warning text-white rounded-circle d-flex align-items-center justify-content-center"
+                                style="width: 50px; height: 50px;">AN</div>
+                            <div class="ms-3">
+                                <strong>kayes salem</strong>
+                                <div class="text-muted small">Patient urgences</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer id="footer" class="footer">
+        <div class="container">
+            <div class="row">
+                <div class="col-md-4 mb-4">
+                    <h5>Clinique hopitaliaire et actions touristiques (CHAT)</h5>
+                    <p>123 Avenue de la Santé<br>UDL SBA, ALGERIE</p>
+                    <p><i class="fas fa-phone me-2"></i>+213 773 460 284<br>
+                        <i class="fas fa-envelope me-2"></i>CHAT@UDL-SBA.dz
+                    </p>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <h5>Liens rapides</h5>
+                    <ul class="list-unstyled">
+                        <li><a href="#" class="text-white-50">À propos</a></li>
+                        <li><a href="#" class="text-white-50">Nos spécialistes</a></li>
+                        <li><a href="#" class="text-white-50">Tarifs et assurances</a></li>
+                        <li><a href="#" class="text-white-50">Carrières</a></li>
+                    </ul>
+                </div>
+
+                <div class="col-md-4 mb-4">
+                    <h5>Suivez-nous</h5>
+                    <div class="d-flex gap-3">
+                        <a href="#" class="text-white fs-4"><i class="fab fa-facebook"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="fab fa-linkedin"></i></a>
+                        <a href="#" class="text-white fs-4"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="bg-light">
+
+            <div class="text-center">
+                <p class="mb-0">&copy; Clinique hopitaliaire et actions touristiques (CHAT). Tous droits réservés.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-lock me-2"></i>
+                        Espace Personnel
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <button class="btn-whatsapp" onclick="window.location.href='connexion-whatsapp.html'">
+                        <i class="fab fa-whatsapp me-2"></i>
+                        Se connecter avec WhatsApp
+                    </button>
+
+                    <div class="separator">
+                        <span>ou</span>
+                    </div>
+
+                    <div class="profil-grid">
+                        <div class="profil-option selected" onclick="selectProfil('medecin', this)">
+                            <i class="fas fa-user-md"></i>
+                            <span>Médecin</span>
+                        </div>
+                        <div class="profil-option" onclick="selectProfil('infirmier', this)">
+                            <i class="fas fa-user-nurse"></i>
+                            <span>Infirmier</span>
+                        </div>
+                        <div class="profil-option" onclick="selectProfil('direction', this)">
+                            <i class="fas fa-crown"></i>
+                            <span>Direction</span>
+                        </div>
+                        <div class="profil-option" onclick="selectProfil('administratif', this)">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Admin</span>
+                        </div>
+                        <div class="profil-option" onclick="selectProfil('hotellerie', this)">
+                            <i class="fas fa-hotel"></i>
+                            <span>Hôtellerie</span>
+                        </div>
+                        <div class="profil-option" onclick="selectProfil('logistique', this)">
+                            <i class="fas fa-boxes"></i>
+                            <span>Logistique</span>
+                        </div>
+                        <div class="profil-option" onclick="selectProfil('qualite', this)">
+                            <i class="fas fa-star"></i>
+                            <span>Qualité</span>
+                        </div>
+                        <div class="profil-option" onclick="selectProfil('voyages', this)">
+                            <i class="fas fa-plane"></i>
+                            <span>Voyages</span>
+                        </div>
+                    </div>
+
+                    <select id="profil-select" class="form-select" hidden>
+                        <option value="medecin" selected>Médecin</option>
+                        <option value="infirmier">Infirmier</option>
+                        <option value="direction">Direction</option>
+                        <option value="administratif">Administratif</option>
+                        <option value="hotellerie">Hôtellerie</option>
+                        <option value="logistique">Logistique</option>
+                        <option value="qualite">Qualité</option>
+                        <option value="voyages">Voyages</option>
+                    </select>
+
+                    <input type="text" id="username" class="form-control" placeholder="Identifiant" value="admin">
+                    <input type="password" id="password" class="form-control" placeholder="Mot de passe"
+                        value="password">
+
+                    <button class="login-btn" onclick="login()">
+                        <i class="fas fa-sign-in-alt me-2"></i>
+                        Se connecter
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+
+    <script>
+        AOS.init({ duration: 1000 });
+
+        window.addEventListener('scroll', function () {
+            const navbar = document.querySelector('.navbar');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+
+        function selectProfil(profil, element) {
+            document.querySelectorAll('.profil-option').forEach(opt => opt.classList.remove('selected'));
+            element.classList.add('selected');
+            document.getElementById('profil-select').value = profil;
+        }
+
+        function login() {
+            const profil = document.getElementById('profil-select').value;
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+
+            const redirections = {
+                'medecin': 'dashboard-medecin.html',
+                'infirmier': 'dashboard-infirmier.html',
+                'direction': 'dashboard-direction.html',
+                'administratif': 'dashboard-admin.html',
+                'hotellerie': 'hotellerie.html',
+                'logistique': 'stocks.html',
+                'qualite': 'qualite.html',
+                'voyages': 'voyages.html'
+            };
+
+            window.location.href = redirections[profil];
+        }
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stocks - Hôpital Saint-Jean</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/js/api.js"></script>
+</head>
+
+<body>
+    <nav class="navbar-custom" style="background: #27ae60;">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand"><i class="fas fa-boxes"></i> Gestion des stocks</span>
+            <button class="btn btn-light btn-sm" onclick="window.location.href='index.html'">Accueil</button>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 py-4">
+        <h2>Inventaire</h2>
+        <div id="stocksList" class="loading-container mt-4">
+            <div class="loading-spinner"></div>
+            <p>Chargement...</p>
+        </div>
+    </div>
+
+    <script>
+        (async function () {
+            try {
+                const produits = await API.get('/produits');
+                const container = document.getElementById('stocksList');
+                if (produits.length) {
+                    container.innerHTML = produits.map(p => {
+                        const alerte = p.stock_actuel < p.seuil_alerte;
+                        return `
+                            <div class="consultation-card mb-2" style="border-left-color: ${alerte ? '#e74c3c' : '#27ae60'};">
+                                <strong>${p.nom}</strong><br>
+                                Stock : ${p.stock_actuel} (seuil : ${p.seuil_alerte})<br>
+                                Type : ${p.type}<br>
+                                ${alerte ? '<span class="badge-custom badge-danger">Stock faible</span>' : ''}
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<p class="text-muted">Aucun produit trouvé.</p>';
+                }
+            } catch (e) {
+                document.getElementById('stocksList').innerHTML = '<p class="text-danger">Erreur chargement.</p>';
+            }
+        })();
+    </script>
+</body>
+
+</html>

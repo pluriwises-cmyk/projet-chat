@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consultations - Médecin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="../css/style.css">
+    <script src="../js/api.js"></script>
+</head>
+
+<body>
+    <nav class="navbar-custom" style="background: #3498db;">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand"><i class="fas fa-stethoscope"></i> Consultations</span>
+            <button class="btn btn-light btn-sm"
+                onclick="window.location.href='../dashboard-medecin.html'">Retour</button>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 py-4">
+        <h2>Liste des consultations</h2>
+        <div id="consultationsList" class="loading-container mt-4">
+            <div class="loading-spinner"></div>
+            <p>Chargement...</p>
+        </div>
+    </div>
+
+    <script>
+        (async function () {
+            try {
+                // Pour l'exemple, on appelle l'API pour 3 consultations (ids 1,2,3)
+                const ids = [1, 2];
+                const consultations = await Promise.all(ids.map(id => API.get(`/consultations/details/${id}`)));
+
+                const container = document.getElementById('consultationsList');
+                container.innerHTML = consultations.map(c => `
+                 <div class="consultation-card mb-2">
+                 <strong>${c.nom} ${c.prenom}</strong><br>
+                 Date : ${c.date_heure}<br>
+                 Motif : ${c.motif}<br>
+                 Statut : ${c.statut}
+                 </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('consultationsList').innerHTML = '<p class="text-danger">Erreur chargement.</p>';
+            }
+        })();
+    </script>
+</body>
+
+</html>

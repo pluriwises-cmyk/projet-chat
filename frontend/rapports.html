@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rapports - Hôpital Saint-Jean</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/js/api.js"></script>
+</head>
+
+<body>
+    <nav class="navbar-custom" style="background: #34495e;">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand"><i class="fas fa-file-alt"></i> Rapports</span>
+            <button class="btn btn-light btn-sm" onclick="window.location.href='index.html'">Accueil</button>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h2>Rapports disponibles</h2>
+            <button class="btn btn-primary" onclick="window.location.href='ajout-rapport.html'">
+                <i class="fas fa-plus"></i> Nouveau rapport
+            </button>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 py-4">
+        <h2>Rapports disponibles</h2>
+        <div id="rapportsList" class="loading-container mt-4">
+            <div class="loading-spinner"></div>
+            <p>Chargement...</p>
+        </div>
+    </div>
+
+    <script>
+        (async function () {
+            try {
+                const rapports = await API.get('/rapports');
+                const container = document.getElementById('rapportsList');
+                if (rapports.length) {
+                    container.innerHTML = rapports.map(r => `
+                        <div class="consultation-card mb-2" style="border-left-color: #34495e;">
+                            <strong>${r.nom}</strong><br>
+                            Période : ${r.periode} – Taille : ${r.taille}<br>
+                            <a href="${r.url}" class="btn btn-sm btn-primary mt-2" download>Télécharger</a>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="text-muted">Aucun rapport trouvé.</p>';
+                }
+            } catch (e) {
+                document.getElementById('rapportsList').innerHTML = '<p class="text-danger">Erreur chargement.</p>';
+            }
+        })();
+    </script>
+</body>
+
+</html>

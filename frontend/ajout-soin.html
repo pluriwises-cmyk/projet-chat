@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nouveau soin</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/js/api.js"></script>
+</head>
+
+<body>
+    <nav class="navbar-custom" style="background: #1abc9c;">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand"><i class="fas fa-hand-holding-medical"></i> Nouveau soin</span>
+            <button class="btn btn-light btn-sm"
+                onclick="window.location.href='dashboard-infirmier.html'">Retour</button>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="card-custom">
+            <h2 class="mb-4">Programmer un soin</h2>
+
+            <div class="mb-3">
+                <label>Patient</label>
+                <select class="form-control" id="id_beneficiaire" required>
+                    <option value="">Chargement...</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label>Type de soin</label>
+                <input type="text" class="form-control" id="type_soin" placeholder="ex: Pansement, Injection..."
+                    required>
+            </div>
+
+            <div class="mb-3 form-check">
+                <input type="checkbox" class="form-check-input" id="urgent">
+                <label class="form-check-label">Urgent</label>
+            </div>
+
+            <button class="btn btn-success" onclick="enregistrerSoin()">Programmer</button>
+            <div id="message" class="mt-3"></div>
+        </div>
+    </div>
+
+    <script>
+        async function chargerPatients() {
+            const patients = await API.get('/beneficiaires');
+            const select = document.getElementById('id_beneficiaire');
+            select.innerHTML = '<option value="">Choisir un patient</option>';
+            patients.forEach(p => {
+                select.innerHTML += `<option value="${p.id_beneficiaire}">${p.nom} ${p.prenom}</option>`;
+            });
+        }
+        chargerPatients();
+
+        async function enregistrerSoin() {
+            const data = {
+                id_beneficiaire: document.getElementById('id_beneficiaire').value,
+                type_soin: document.getElementById('type_soin').value,
+                urgent: document.getElementById('urgent').checked ? 1 : 0
+            };
+            if (!data.id_beneficiaire || !data.type_soin) {
+                return document.getElementById('message').innerHTML = '<div class="alert alert-warning">Tous les champs requis</div>';
+            }
+            try {
+                const result = await API.post('/soins', data);
+                document.getElementById('message').innerHTML = `<div class="alert alert-success">Soin programmé (ID ${result.id})</div>`;
+                document.getElementById('type_soin').value = '';
+                document.getElementById('urgent').checked = false;
+            } catch (e) {
+                document.getElementById('message').innerHTML = '<div class="alert alert-danger">Erreur</div>';
+            }
+        }
+    </script>
+</body>
+
+</html>

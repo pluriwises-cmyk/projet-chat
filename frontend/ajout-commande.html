@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nouvelle commande repas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/js/api.js"></script>
+</head>
+
+<body>
+    <nav class="navbar-custom" style="background: #e67e22;">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand"><i class="fas fa-utensils"></i> Nouvelle commande</span>
+            <button class="btn btn-light btn-sm" onclick="window.location.href='hotellerie.html'">Retour</button>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="card-custom">
+            <h2 class="mb-4">Commander un repas</h2>
+
+            <div class="mb-3">
+                <label>Patient</label>
+                <select class="form-control" id="id_beneficiaire" required>
+                    <option value="">Chargement...</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label>Type de service</label>
+                <select class="form-control" id="type_service">
+                    <option value="salle">Salle</option>
+                    <option value="hospitalisation">Hospitalisation</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label>Régime</label>
+                <input type="text" class="form-control" id="regime" placeholder="ex: Sans sel, diabétique...">
+            </div>
+
+            <div class="mb-3">
+                <label>Instructions</label>
+                <textarea class="form-control" id="instructions" rows="2"></textarea>
+            </div>
+
+            <button class="btn btn-success" onclick="enregistrerCommande()">Commander</button>
+            <div id="message" class="mt-3"></div>
+        </div>
+    </div>
+
+    <script>
+        async function chargerPatients() {
+            const patients = await API.get('/beneficiaires');
+            const select = document.getElementById('id_beneficiaire');
+            select.innerHTML = '<option value="">Choisir un patient</option>';
+            patients.forEach(p => {
+                select.innerHTML += `<option value="${p.id_beneficiaire}">${p.nom} ${p.prenom}</option>`;
+            });
+        }
+        chargerPatients();
+
+        async function enregistrerCommande() {
+            const data = {
+                id_beneficiaire: document.getElementById('id_beneficiaire').value,
+                type_service: document.getElementById('type_service').value,
+                regime: document.getElementById('regime').value,
+                instructions: document.getElementById('instructions').value
+            };
+            if (!data.id_beneficiaire) {
+                return document.getElementById('message').innerHTML = '<div class="alert alert-warning">Patient requis</div>';
+            }
+            try {
+                const result = await API.post('/commandes', data);
+                document.getElementById('message').innerHTML = `<div class="alert alert-success">Commande enregistrée (ID ${result.id})</div>`;
+                document.getElementById('regime').value = '';
+                document.getElementById('instructions').value = '';
+            } catch (e) {
+                document.getElementById('message').innerHTML = '<div class="alert alert-danger">Erreur</div>';
+            }
+        }
+    </script>
+</body>
+
+</html>

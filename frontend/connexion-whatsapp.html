@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Connect - Hôpital Saint-Jean</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/js/api.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #00b09b, #96c93d);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+        .bg-bubbles {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+        .bubble {
+            position: absolute;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            animation: float 8s infinite;
+        }
+        .bubble:nth-child(1) { width: 200px; height: 200px; top: -50px; right: -50px; }
+        .bubble:nth-child(2) { width: 300px; height: 300px; bottom: -100px; left: -100px; animation-delay: 2s; }
+        .bubble:nth-child(3) { width: 150px; height: 150px; bottom: 50px; right: 100px; animation-delay: 4s; }
+        @keyframes float {
+            0%,100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(5deg); }
+        }
+        .whatsapp-premium {
+            position: relative;
+            z-index: 2;
+            max-width: 900px;
+            width: 95%;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 50px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+            animation: slideUp 0.6s cubic-bezier(0.16,1,0.3,1);
+        }
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(50px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .whatsapp-header {
+            background: linear-gradient(135deg, #075E54 0%, #128C7E 50%, #25D366 100%);
+            padding: 50px 40px;
+            color: white;
+            position: relative;
+            overflow: hidden;
+        }
+        .whatsapp-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .header-icon {
+            font-size: 6rem;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 10px 20px rgba(0,0,0,0.2));
+            animation: bounce 2s infinite;
+        }
+        @keyframes bounce {
+            0%,100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        .whatsapp-header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+        .whatsapp-header p {
+            font-size: 1.2rem;
+            opacity: 0.95;
+            margin-bottom: 0;
+        }
+        .whatsapp-body {
+            padding: 40px;
+            background: white;
+        }
+        .steps-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            position: relative;
+        }
+        .steps-indicator::before {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 1;
+        }
+        .step-item {
+            position: relative;
+            z-index: 2;
+            background: white;
+            padding: 0 15px;
+            text-align: center;
+        }
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: #f0f0f0;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            margin: 0 auto 10px;
+            transition: all 0.3s;
+        }
+        .step-item.active .step-number {
+            background: #25D366;
+            color: white;
+            box-shadow: 0 5px 15px rgba(37,211,102,0.4);
+        }
+        .step-item.completed .step-number {
+            background: #075E54;
+            color: white;
+        }
+        .step-label {
+            font-size: 0.9rem;
+            color: #666;
+            font-weight: 500;
+        }
+        .step-item.active .step-label {
+            color: #25D366;
+            font-weight: 600;
+        }
+        .step-content {
+            display: none;
+            animation: fadeScale 0.5s ease;
+        }
+        .step-content.active {
+            display: block;
+        }
+        @keyframes fadeScale {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .feature-card {
+            background: linear-gradient(135deg, #f8f9fa, #ffffff);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 1px solid rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        }
+        .feature-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: white;
+            margin-right: 15px;
+        }
+        .input-group-premium {
+            margin-bottom: 25px;
+        }
+        .input-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .input-label i {
+            color: #25D366;
+        }
+        .premium-input {
+            width: 100%;
+            padding: 18px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 20px;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            background: white;
+        }
+        .premium-input:focus {
+            border-color: #25D366;
+            outline: none;
+            box-shadow: 0 0 0 5px rgba(37,211,102,0.1);
+        }
+        .premium-input.error {
+            border-color: #ff4444;
+            animation: shake 0.5s;
+        }
+        @keyframes shake {
+            0%,100% { transform: translateX(0); }
+            10%,30%,50%,70%,90% { transform: translateX(-5px); }
+            20%,40%,60%,80% { transform: translateX(5px); }
+        }
+        .code-container {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+        }
+        .code-box {
+            width: 70px;
+            height: 80px;
+            border: 3px solid #e0e0e0;
+            border-radius: 20px;
+            text-align: center;
+            font-size: 2.5rem;
+            font-weight: 700;
+            color: #333;
+            transition: all 0.3s;
+        }
+        .code-box:focus {
+            border-color: #25D366;
+            outline: none;
+            box-shadow: 0 0 0 5px rgba(37,211,102,0.1);
+            transform: scale(1.05);
+        }
+        .code-box.filled {
+            border-color: #25D366;
+            background: #f0f9f0;
+        }
+        .timer-container {
+            background: #f8f9fa;
+            border-radius: 50px;
+            padding: 15px 25px;
+            margin: 20px 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .timer-circle {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+        }
+        .timer-text {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #333;
+        }
+        .timer-text.warning {
+            color: #ff4444;
+            animation: pulse 1s infinite;
+        }
+        .btn-premium {
+            width: 100%;
+            padding: 18px;
+            border: none;
+            border-radius: 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .btn-whatsapp {
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: white;
+            box-shadow: 0 10px 20px rgba(37,211,102,0.3);
+        }
+        .btn-whatsapp:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(37,211,102,0.4);
+        }
+        .btn-outline-whatsapp {
+            background: white;
+            color: #25D366;
+            border: 2px solid #25D366;
+        }
+        .btn-outline-whatsapp:hover {
+            background: #25D366;
+            color: white;
+            transform: translateY(-3px);
+        }
+        .success-animation {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .checkmark-circle {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 30px;
+            animation: scaleIn 0.5s;
+        }
+        .checkmark-circle i {
+            font-size: 4rem;
+            color: white;
+        }
+        .loading-dots {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .loading-dots div {
+            width: 15px;
+            height: 15px;
+            background: #25D366;
+            border-radius: 50%;
+            animation: loading 1.4s infinite;
+        }
+        .loading-dots div:nth-child(2) { animation-delay: 0.2s; }
+        .loading-dots div:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes loading {
+            0%,60%,100% { transform: translateY(0); opacity: 0.5; }
+            30% { transform: translateY(-20px); opacity: 1; }
+        }
+        @keyframes scaleIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+        .security-badge {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: #f8f9fa;
+            border-radius: 50px;
+            padding: 10px 20px;
+            margin-top: 20px;
+        }
+        .security-badge i {
+            color: #25D366;
+            font-size: 1.2rem;
+        }
+        @media (max-width: 768px) {
+            .whatsapp-header h1 { font-size: 2rem; }
+            .code-container { gap: 8px; }
+            .code-box { width: 45px; height: 60px; font-size: 1.8rem; }
+            .whatsapp-body { padding: 25px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-bubbles">
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+        <div class="bubble"></div>
+    </div>
+
+    <div class="whatsapp-premium">
+        <div class="whatsapp-header">
+            <div class="text-center">
+                <i class="fab fa-whatsapp header-icon"></i>
+                <h1 class="animate__animated animate__fadeInUp">WhatsApp Connect</h1>
+                <p class="animate__animated animate__fadeInUp animate__delay-1s">
+                    <i class="fas fa-shield-alt me-2"></i>
+                    Connexion sécurisée • Instantanée • Fiable
+                </p>
+            </div>
+        </div>
+
+        <div class="whatsapp-body">
+            <div class="steps-indicator">
+                <div class="step-item active" id="step1-indicator">
+                    <div class="step-number">1</div>
+                    <div class="step-label">Numéro</div>
+                </div>
+                <div class="step-item" id="step2-indicator">
+                    <div class="step-number">2</div>
+                    <div class="step-label">Code</div>
+                </div>
+                <div class="step-item" id="step3-indicator">
+                    <div class="step-number">3</div>
+                    <div class="step-label">Connexion</div>
+                </div>
+            </div>
+
+            <div id="errorMessage" class="alert alert-danger d-none animate__animated animate__shakeX">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <span id="errorText"></span>
+            </div>
+
+            <!-- STEP 1 -->
+            <div id="step1" class="step-content active">
+                <div class="feature-card">
+                    <div class="d-flex align-items-center">
+                        <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+                        <div>
+                            <h5 class="mb-1">Connexion 100% sécurisée</h5>
+                            <p class="text-muted mb-0">Votre numéro ne sera jamais partagé</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="input-group-premium">
+                    <label class="input-label"><i class="fas fa-phone-alt"></i> Votre numéro WhatsApp</label>
+                    <input type="tel" id="phone" class="premium-input" placeholder="+221 77 123 45 67" value="+221771234567">
+                    <small class="text-muted mt-2 d-block">
+                        <i class="fas fa-info-circle me-1"></i> Format international recommandé
+                    </small>
+                </div>
+
+                <div class="form-check mb-4">
+                    <input class="form-check-input" type="checkbox" id="terms" checked>
+                    <label class="form-check-label" for="terms">J'accepte de recevoir un code de confirmation par WhatsApp</label>
+                </div>
+
+                <button class="btn-premium btn-whatsapp" onclick="envoyerCode()">
+                    <i class="fab fa-whatsapp"></i> Envoyer le code <i class="fas fa-arrow-right ms-2"></i>
+                </button>
+
+                <div class="security-badge">
+                    <i class="fas fa-lock"></i>
+                    <span class="small">Connexion 100% sécurisée • Chiffrement de bout en bout</span>
+                </div>
+
+                <div class="text-center mt-3">
+                    <a href="index.html" class="text-decoration-none small"><i class="fas fa-arrow-left me-2"></i>Retour à l'accueil</a>
+                </div>
+            </div>
+
+            <!-- STEP 2 -->
+            <div id="step2" class="step-content">
+                <div class="feature-card">
+                    <div class="d-flex align-items-center">
+                        <div class="feature-icon"><i class="fas fa-envelope"></i></div>
+                        <div>
+                            <h5 class="mb-1">Code envoyé !</h5>
+                            <p class="text-muted mb-0">Au numéro <strong id="phoneDisplay" class="text-success"></strong></p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center mb-3">
+                    <span class="badge bg-success px-3 py-2"><i class="fas fa-clock me-2"></i>Code valable 2 minutes</span>
+                </div>
+
+                <div class="code-container">
+                    <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 1)" oninput="checkFilled(this)">
+                    <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 2)" oninput="checkFilled(this)">
+                    <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 3)" oninput="checkFilled(this)">
+                    <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 4)" oninput="checkFilled(this)">
+                    <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 5)" oninput="checkFilled(this)">
+                    <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 6)" oninput="checkFilled(this)">
+                </div>
+
+                <div class="timer-container">
+                    <div class="timer-circle"><i class="fas fa-clock"></i></div>
+                    <div>
+                        <div class="small text-muted">Temps restant</div>
+                        <div class="timer-text" id="countdown">02:00</div>
+                    </div>
+                    <button class="btn btn-sm btn-outline-secondary" onclick="renvoyerCode()"><i class="fas fa-redo-alt"></i></button>
+                </div>
+
+                <button class="btn-premium btn-whatsapp mt-3" onclick="verifierCode()"><i class="fas fa-check-circle"></i> Vérifier le code</button>
+                <button class="btn-premium btn-outline-whatsapp mt-3" onclick="retourEtape1()"><i class="fas fa-arrow-left"></i> Modifier le numéro</button>
+            </div>
+
+            <!-- STEP 3 -->
+            <div id="step3" class="step-content">
+                <div class="success-animation">
+                    <div class="checkmark-circle"><i class="fas fa-check"></i></div>
+                    <h2 class="fw-bold text-success mb-3">Connexion réussie !</h2>
+                    <p class="text-muted mb-4">Redirection vers votre espace patient</p>
+                    <div class="loading-dots"><div></div><div></div><div></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        console.log('✅ Script chargé');
+        let countdownInterval;
+        let timeLeft = 120;
+        let currentPhone = '';
+
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            document.getElementById('errorText').textContent = message;
+            errorDiv.classList.remove('d-none');
+            console.log('⏱️ Lancement du setTimeou unique 01');
+            setTimeout(() => errorDiv.classList.add('d-none'), 3000);
+        }
+
+        function updateSteps(step) {
+            ['step1-indicator', 'step2-indicator', 'step3-indicator'].forEach(id => {
+                document.getElementById(id).classList.remove('active', 'completed');
+            });
+            if (step === 1) {
+                document.getElementById('step1-indicator').classList.add('active');
+            } else if (step === 2) {
+                document.getElementById('step1-indicator').classList.add('completed');
+                document.getElementById('step2-indicator').classList.add('active');
+            } else if (step === 3) {
+                document.getElementById('step1-indicator').classList.add('completed');
+                document.getElementById('step2-indicator').classList.add('completed');
+                document.getElementById('step3-indicator').classList.add('active');
+            }
+        }
+
+        function envoyerCode() {
+            const phone = document.getElementById('phone').value;
+            const terms = document.getElementById('terms').checked;
+
+            if (!phone) {
+                showError('Veuillez entrer votre numéro');
+                document.getElementById('phone').classList.add('error');
+                console.log('⏱️ Lancement du setTimeou unique 02');
+                setTimeout(() => document.getElementById('phone').classList.remove('error'), 500);
+                return;
+            }
+            if (!terms) {
+                showError('Veuillez accepter les conditions');
+                return;
+            }
+
+            fetch('/api/whatsapp/request-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telephone: phone })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    currentPhone = phone;
+                    document.getElementById('step1').classList.remove('active');
+                    document.getElementById('step2').classList.add('active');
+                    updateSteps(2);
+                    document.getElementById('phoneDisplay').textContent = phone;
+                    startCountdown();
+                    if (data.code_dev) {
+                        console.log('📱 Code de test (à des fins de développement) :', data.code_dev);
+                    }
+                } else {
+                    showError(data.error || 'Erreur serveur');
+                }
+            })
+            .catch(() => showError('Erreur de connexion au serveur'));
+        }
+
+        function verifierCode() {
+            
+
+            const inputs = document.querySelectorAll('.code-box');
+            let code = '';
+            inputs.forEach(input => code += input.value);
+
+            if (code.length < 6) {
+                showError('Code incomplet');
+                return;
+            }
+
+            console.log('📤 Envoi du code au serveur...', code);
+
+            fetch('/api/whatsapp/verify-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telephone: currentPhone, code: code })
+            })
+            .then(res => {
+                console.log('📥 Statut HTTP :', res.status);
+                return res.json();
+            })
+            .then(data => {
+                console.log('📥 Réponse du serveur :', JSON.stringify(data));
+                if (data.success) {
+                    document.getElementById('step2').classList.remove('active');
+                    document.getElementById('step3').classList.add('active');
+                    updateSteps(3);
+
+                    if (data.token) {
+                        localStorage.setItem('token', data.token);
+                    }
+                    if (data.user) {
+                        localStorage.setItem('user', JSON.stringify(data.user));
+                    }
+
+                    setTimeout(() => {
+                        if (data.tempToken) {
+                            window.location.href = `inscription-patient.html?tel=${encodeURIComponent(currentPhone)}&token=${data.tempToken}`;
+                        } else {
+                            window.location.href = data.redirect || 'dashboard-patient.html';
+                        }
+                    }, 2000);
+                } else {
+                    showError(data.error || 'Code incorrect');
+                    inputs.forEach(input => { input.value = ''; input.classList.remove('filled'); });
+                    inputs[0].focus();
+                }
+            })
+            .catch(err => {
+                console.error('❌ Erreur fetch :', err);
+                showError('Erreur de connexion au serveur');
+            });
+        }
+
+        function moveToNext(current, nextIndex) {
+            if (current.value.length === 1 && nextIndex < 6) {
+                const next = document.querySelectorAll('.code-box')[nextIndex];
+                if (next) next.focus();
+            }
+        }
+
+        function checkFilled(input) {
+            if (input.value.length === 1) {
+                input.classList.add('filled');
+            } else {
+                input.classList.remove('filled');
+            }
+        }
+
+        function startCountdown() {
+            timeLeft = 120;
+            updateCountdown();
+            countdownInterval = setInterval(() => {
+                timeLeft--;
+                updateCountdown();
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    document.getElementById('countdown').innerHTML = '00:00';
+                    document.getElementById('countdown').classList.add('warning');
+                    showError('Code expiré. Veuillez renvoyer un code.');
+                }
+            }, 1000);
+        }
+
+        function updateCountdown() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            const countdown = document.getElementById('countdown');
+            countdown.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            if (timeLeft <= 30) {
+                countdown.classList.add('warning');
+            }
+        }
+
+        function renvoyerCode() {
+            clearInterval(countdownInterval);
+            fetch('/api/whatsapp/request-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ telephone: currentPhone })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    startCountdown();
+                } else {
+                    showError(data.error || 'Erreur');
+                }
+            })
+            .catch(() => showError('Erreur de connexion'));
+        }
+
+        function retourEtape1() {
+            clearInterval(countdownInterval);
+            document.getElementById('step2').classList.remove('active');
+            document.getElementById('step1').classList.add('active');
+            updateSteps(1);
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nouvelle course</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/js/api.js"></script>
+</head>
+
+<body>
+    <nav class="navbar-custom" style="background: #3498db;">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand"><i class="fas fa-truck"></i> Nouvelle course</span>
+            <button class="btn btn-light btn-sm" onclick="window.location.href='voyages.html'">Retour</button>
+        </div>
+    </nav>
+
+    <div class="container mt-5">
+        <div class="card-custom">
+            <h2 class="mb-4">Planifier un transport</h2>
+
+            <div class="mb-3">
+                <label>Véhicule</label>
+                <select class="form-control" id="id_vehicule" required>
+                    <option value="">Chargement...</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label>Chauffeur</label>
+                <select class="form-control" id="id_chauffeur" required>
+                    <option value="">Chargement...</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label>Patient</label>
+                <select class="form-control" id="id_beneficiaire" required>
+                    <option value="">Chargement...</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label>Date et heure de départ</label>
+                <input type="datetime-local" class="form-control" id="date_depart" required>
+            </div>
+
+            <div class="mb-3">
+                <label>Lieu de départ</label>
+                <input type="text" class="form-control" id="lieu_depart" required>
+            </div>
+
+            <div class="mb-3">
+                <label>Destination</label>
+                <input type="text" class="form-control" id="destination" required>
+            </div>
+
+            <div class="mb-3">
+                <label>Type</label>
+                <select class="form-control" id="type">
+                    <option value="sanitaire">Sanitaire</option>
+                    <option value="touristique">Touristique</option>
+                </select>
+            </div>
+
+            <button class="btn btn-success" onclick="enregistrerCourse()">Planifier</button>
+            <div id="message" class="mt-3"></div>
+        </div>
+    </div>
+
+    <script>
+        async function chargerVehicules() {
+            const v = await API.get('/vehicules');
+            const select = document.getElementById('id_vehicule');
+            select.innerHTML = '<option value="">Choisir</option>';
+            v.forEach(v => select.innerHTML += `<option value="${v.id_vehicule}">${v.type} (${v.immatriculation})</option>`);
+        }
+        async function chargerChauffeurs() {
+            const p = await API.get('/personnel');
+            const select = document.getElementById('id_chauffeur');
+            select.innerHTML = '<option value="">Choisir</option>';
+            p.forEach(p => select.innerHTML += `<option value="${p.id_personnel}">${p.prenom} ${p.nom}</option>`);
+        }
+        async function chargerPatients() {
+            const p = await API.get('/beneficiaires');
+            const select = document.getElementById('id_beneficiaire');
+            select.innerHTML = '<option value="">Choisir</option>';
+            p.forEach(p => select.innerHTML += `<option value="${p.id_beneficiaire}">${p.prenom} ${p.nom}</option>`);
+        }
+        chargerVehicules();
+        chargerChauffeurs();
+        chargerPatients();
+
+        async function enregistrerCourse() {
+            const data = {
+                id_vehicule: document.getElementById('id_vehicule').value,
+                id_chauffeur: document.getElementById('id_chauffeur').value,
+                id_beneficiaire: document.getElementById('id_beneficiaire').value,
+                date_depart: document.getElementById('date_depart').value,
+                lieu_depart: document.getElementById('lieu_depart').value,
+                destination: document.getElementById('destination').value,
+                type: document.getElementById('type').value
+            };
+            if (!data.id_vehicule || !data.id_chauffeur || !data.id_beneficiaire || !data.date_depart || !data.lieu_depart || !data.destination) {
+                return document.getElementById('message').innerHTML = '<div class="alert alert-warning">Tous les champs sont requis</div>';
+            }
+            try {
+                const result = await API.post('/courses', data);
+                document.getElementById('message').innerHTML = `<div class="alert alert-success">Course planifiée (ID ${result.id})</div>`;
+            } catch (e) {
+                document.getElementById('message').innerHTML = '<div class="alert alert-danger">Erreur</div>';
+            }
+        }
+    </script>
+</body>
+
+</html>

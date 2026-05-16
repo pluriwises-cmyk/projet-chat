@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voyages - CHAT</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/js/api.js"></script>
+</head>
+
+<body>
+    <nav class="navbar-custom" style="background: #3498db;">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand"><i class="fas fa-plane"></i> Agence voyages</span>
+            <button class="btn btn-light btn-sm" onclick="window.location.href='index.html'">Accueil</button>
+        </div>
+    </nav>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2>Transferts du jour et etat du parck</h2>
+        <button class="btn btn-primary" onclick="window.location.href='ajout-course.html'">
+            <i class="fas fa-plus"></i> Nouvelle course
+        </button>
+    </div>
+
+    <div class="container-fluid px-4 py-4">
+        <h2>Transferts du jour</h2>
+        <div id="transfertsList" class="loading-container mt-4">
+            <div class="loading-spinner"></div>
+            <p>Chargement...</p>
+        </div>
+
+        <h2 class="mt-5">Véhicules disponibles</h2>
+        <div id="vehiculesList" class="loading-container mt-4">
+            <div class="loading-spinner"></div>
+            <p>Chargement...</p>
+        </div>
+    </div>
+
+    <script>
+        (async function () {
+            try {
+                // Récupération des courses
+                const courses = await API.get('/courses');
+                const transfertsContainer = document.getElementById('transfertsList');
+                if (courses.length) {
+                    transfertsContainer.innerHTML = courses.map(t => {
+                        const date = new Date(t.date_depart);
+                        const heure = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+                        return `
+                            <div class="consultation-card mb-2" style="border-left-color: #3498db;">
+                                <strong>${heure}</strong> – ${t.patient_nom} ${t.patient_prenom}<br>
+                                ${t.lieu_depart} → ${t.destination}<br>
+                                Chauffeur : ${t.chauffeur_prenom} ${t.chauffeur_nom}<br>
+                                Véhicule : ${t.immatriculation}<br>
+                                <span class="badge-custom badge-${t.statut === 'terminee' ? 'success' : t.statut === 'en_cours' ? 'info' : 'warning'}">${t.statut}</span>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    transfertsContainer.innerHTML = '<p class="text-muted">Aucun transfert aujourd\'hui.</p>';
+                }
+
+                // Récupération des véhicules
+                const vehicules = await API.get('/vehicules');
+                const vehiculesContainer = document.getElementById('vehiculesList');
+                if (vehicules.length) {
+                    vehiculesContainer.innerHTML = vehicules.map(v => `
+                        <div class="consultation-card mb-2" style="border-left-color: #3498db;">
+                            <strong>${v.type}</strong> (${v.immatriculation})<br>
+                            <span class="badge-custom badge-${v.etat === 'disponible' ? 'success' : v.etat === 'en_course' ? 'info' : 'danger'}">${v.etat}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    vehiculesContainer.innerHTML = '<p class="text-muted">Aucun véhicule trouvé.</p>';
+                }
+
+            } catch (e) {
+                document.getElementById('transfertsList').innerHTML = '<p class="text-danger">Erreur chargement.</p>';
+            }
+        })();
+    </script>
+</body>
+
+</html>

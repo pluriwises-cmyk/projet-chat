@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Direction - Hôpital Saint-Jean</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/js/api.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        canvas {
+    max-height: 300px;
+    width: 100% !important;
+    height: auto !important;
+    }
+    </style>
+    
+
+</head>
+
+<body>
+    <nav class="navbar-custom" style="background: linear-gradient(135deg, #2c3e50, #34495e);">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand"><i class="fas fa-crown"></i> Direction</span>
+            <div>
+                <span class="text-white me-3">Directeur</span>
+                <button class="btn btn-light btn-sm" onclick="API.logout()">Déconnexion</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 py-4 fade-in">
+        <h2 class="mb-4">Tableau de bord direction</h2>
+
+        <div class="quick-actions-grid">
+            <div class="quick-action-card" onclick="window.location.href='direction/finances.html'"><i
+                    class="fas fa-chart-line"></i><span>Finances</span></div>
+            <div class="quick-action-card" onclick="window.location.href='direction/projets.html'"><i
+                    class="fas fa-project-diagram"></i><span>Projets</span></div>
+            <div class="quick-action-card" onclick="window.location.href='rapports.html'"><i
+                    class="fas fa-file-alt"></i><span>Rapports</span></div>
+            <div class="quick-action-card" onclick="window.location.href='parametres.html'"><i
+                    class="fas fa-cog"></i><span>Paramètres</span></div>
+        </div>
+
+        <div class="row mb-4" id="statsRow"></div>
+
+        <!-- Graphiques -->
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <h5><i class="fas fa-chart-line me-2" style="color: #3498db;"></i>Évolution du chiffre
+                            d'affaires</h5>
+                    </div>
+                    <canvas id="caChart" style="height: 300px; width: 100%;"></canvas>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <h5><i class="fas fa-chart-pie me-2" style="color: #27ae60;"></i>Répartition des dépenses</h5>
+                    </div>
+                    <canvas id="depensesChart" style="height: 300px; width: 100%;"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (async function () {
+            try {
+                const stats = await API.get('/statistiques/dashboard');
+
+                // Stats en haut
+                document.getElementById('statsRow').innerHTML = `
+                    <div class="col-md-3"><div class="stat-card" style="border-left-color:#27ae60;"><div class="stat-value">${stats.ca_mensuel || '2.8M'}</div><div class="stat-label">CA mensuel</div></div></div>
+                    <div class="col-md-3"><div class="stat-card" style="border-left-color:#3498db;"><div class="stat-value">${stats.patients_total || '1 247'}</div><div class="stat-label">Patients actifs</div></div></div>
+                    <div class="col-md-3"><div class="stat-card" style="border-left-color:#f39c12;"><div class="stat-value">${stats.taux_occupation || '78%'}</div><div class="stat-label">Occupation</div></div></div>
+                    <div class="col-md-3"><div class="stat-card" style="border-left-color:#e74c3c;"><div class="stat-value">${stats.factures_impayees || '0'}</div><div class="stat-label">Factures impayées</div></div></div>
+                `;
+
+                // Graphiques
+                if (stats.graphiques && Array.isArray(stats.graphiques.caMensuel)) {
+    // Graphique CA
+    const ctx = document.getElementById('caChart').getContext('2d');
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'],
+            datasets: [{
+                label: 'CA (DA)',
+                data: stats.graphiques.caMensuel,
+                borderColor: '#3498db',
+                backgroundColor: 'rgba(52,152,219,0.1)',
+                borderWidth: 2,
+                tension: 0.3,
+                fill: true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 1000 // limite l'animation
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return value / 1000000 + 'M';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Graphique dépenses
+    const ctx2 = document.getElementById('depensesChart').getContext('2d');
+    new Chart(ctx2, {
+        type: 'doughnut',
+        data: {
+            labels: ['Salaires', 'Médicaments', 'Équipement', 'Maintenance', 'Autres'],
+            datasets: [{
+                data: Object.values(stats.graphiques.repartitionDepenses),
+                backgroundColor: ['#3498db', '#e74c3c', '#f39c12', '#9b59b6', '#95a5a6']
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: {
+                duration: 1000
+            }
+        }
+    });
+}
+            } catch (e) {
+                console.error('Erreur chargement direction :', e);
+            }
+        })();
+    </script>
+</body>
+
+</html>

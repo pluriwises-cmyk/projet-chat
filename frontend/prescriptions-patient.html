@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mes prescriptions - Hôpital Saint-Jean</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script src="/js/api.js"></script>
+</head>
+<body>
+    <nav class="navbar-custom" style="background: #27ae60;">
+        <div class="container-fluid px-4">
+            <span class="navbar-brand"><i class="fas fa-prescription"></i> Mes prescriptions</span>
+            <button class="btn btn-light btn-sm" onclick="window.location.href='dashboard-patient.html'">Retour</button>
+        </div>
+    </nav>
+
+    <div class="container-fluid px-4 py-4">
+        <h2>Vos prescriptions</h2>
+        <div id="prescriptionsContainer" class="loading-container mt-4">
+            <div class="loading-spinner"></div>
+            <p>Chargement de vos prescriptions...</p>
+        </div>
+    </div>
+
+    <script>
+        async function chargerPrescriptions() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            const id_beneficiaire = payload.id;
+
+            try {
+                // Simuler des données en attendant la vraie route API
+                const prescriptions = [
+                    { medicament: "Amoxicilline 500mg", posologie: "1 comprimé 3x/jour", date: "15/03/2026", statut: "en_cours" },
+                    { medicament: "Paracétamol 1000mg", posologie: "1 comprimé si douleur", date: "10/03/2026", statut: "termine" }
+                ];
+
+                const container = document.getElementById('prescriptionsContainer');
+                if (prescriptions.length) {
+                    container.innerHTML = prescriptions.map(p => `
+                        <div class="consultation-card mb-2">
+                            <strong>${p.medicament}</strong><br>
+                            ${p.posologie}<br>
+                            Prescrit le : ${p.date}<br>
+                            <span class="badge-custom badge-${p.statut === 'en_cours' ? 'warning' : 'success'}">${p.statut}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<p class="text-muted">Aucune prescription trouvée.</p>';
+                }
+            } catch (e) {
+                document.getElementById('prescriptionsContainer').innerHTML = '<p class="text-danger">Erreur chargement.</p>';
+            }
+        }
+
+        chargerPrescriptions();
+    </script>
+</body>
+</html>

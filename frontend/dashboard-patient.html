@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Espace Patient - CHAT -</title>
+    
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- NOTRE CSS GLOBAL -->
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="js/api.js"></script>
+    
+    <style>
+        /* Styles supplémentaires si besoin */
+        .consultation-card {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--secondary);
+            transition: all 0.3s;
+            box-shadow: var(--shadow);
+        }
+        .consultation-card:hover {
+            transform: translateX(5px);
+            box-shadow: var(--shadow-hover);
+        }
+        .stat-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+            border-left: 4px solid var(--patient);
+            transition: all 0.3s;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(52,152,219,0.1);
+        }
+        .stat-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(52,152,219,0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: var(--patient);
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .stat-label {
+            color: #7f8c8d;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="navbar navbar-custom" style="background: linear-gradient(135deg, #3498db, #2980b9);">
+    <div class="container-fluid px-4">
+        <span class="navbar-brand">
+            <i class="fas fa-heartbeat me-2"></i>
+            Hôpital -CHAT-
+        </span>
+        <div class="user-profile">
+            <div class="date-badge">
+                <i class="far fa-calendar-alt me-2"></i>
+                <span id="current-date"></span>
+            </div>
+            <div class="user-avatar" id="user-avatar">
+                <span id="user-initials">P</span>
+            </div>
+            <div>
+                <div><strong id="user-name">Patient</strong></div>
+                <small id="user-info">Espace personnel</small>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<!-- Main Content -->
+<div class="container-fluid px-4 py-4">
+    <div class="row">
+        <!-- Sidebar Patient -->
+        <div class="col-lg-3">
+            <div class="patient-sidebar">
+                <div class="patient-avatar-large" id="sidebar-avatar">
+                    P
+                </div>
+                <div class="patient-name" id="sidebar-name">Chargement...</div>
+                <div class="patient-info" id="sidebar-info">
+                    <i class="fas fa-envelope me-2"></i><span id="sidebar-email">...</span><br>
+                    <i class="fas fa-phone me-2"></i><span id="sidebar-phone">...</span><br>
+                    <i class="fas fa-id-card me-2"></i>N° <span id="sidebar-id">...</span>
+                </div>
+                
+                <ul class="patient-menu">
+                    <li><a href="#" class="active" onclick="showPatientSection('dashboard')"><i class="fas fa-tachometer-alt"></i> Tableau de bord</a></li>
+                    <li><a href="#" onclick="showPatientSection('rendezvous')"><i class="fas fa-calendar-check"></i> Mes rendez-vous</a></li>
+                    <li><a href="#" onclick="showPatientSection('dossier')"><i class="fas fa-folder-open"></i> Mon dossier</a></li>
+                    <li><a href="#" onclick="voirFactures()"><i class="fas fa-file-invoice"></i> Factures</a></li>
+                    <li><a href="#" onclick="prescriptions()"><i class="fas fa-prescription"></i> Prescriptions</a></li>
+                    <li><a href="#" onclick="showPatientSection('factures')"><i class="fas fa-file-invoice"></i> Factures</a></li>
+                  <li><a href="#" onclick="voirMessages()"><i class="fas fa-envelope"></i> Messages</a></li>
+                   <li><a href="#" onclick="voirDocuments()"><i class="fas fa-file-pdf"></i> Mes documents</a></li>
+                    
+                </ul>
+                
+                <hr>
+                <div class="text-center">
+                    <button class="btn btn-outline-danger w-100" onclick="deconnexion()">
+                        <i class="fas fa-sign-out-alt me-2"></i>Déconnexion
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Contenu Principal -->
+        <div class="col-lg-9">
+            
+            <!-- SECTION DASHBOARD -->
+            <div id="patient-dashboard" class="patient-section active">
+                <!-- Quick Actions -->
+                <div class="quick-actions-grid">
+                    <div class="quick-action-card" onclick="prendreRendezVous()">
+                        <i class="fas fa-calendar-plus"></i><span>Prendre RDV</span>
+                    </div>
+                    <div class="quick-action-card" onclick="consulterDossier()">
+                        <i class="fas fa-file-medical"></i><span>Mon dossier</span>
+                    </div>
+                    <div class="quick-action-card" onclick="contacterMedecin()">
+                        <i class="fas fa-comment-medical"></i><span>Contacter médecin</span>
+                    </div>
+                    <div class="quick-action-card" onclick="payerFacture()">
+                        <i class="fas fa-credit-card"></i><span>Payer en ligne</span>
+                    </div>
+                </div>
+                
+                <!-- Stats Row -->
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon"><i class="fas fa-calendar-check"></i></div>
+                                <div><div class="stat-value" id="prochains-rdv">0</div><div class="stat-label">Prochains RDV</div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="border-left-color: var(--success);">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon" style="color: var(--success);"><i class="fas fa-prescription"></i></div>
+                                <div><div class="stat-value" id="prescriptions-actives">0</div><div class="stat-label">Prescriptions</div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="border-left-color: var(--warning);">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon" style="color: var(--warning);"><i class="fas fa-file-invoice"></i></div>
+                                <div><div class="stat-value" id="factures-attente">0</div><div class="stat-label">Factures</div></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="border-left-color: var(--danger);">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="stat-icon" style="color: var(--danger);"><i class="fas fa-envelope"></i></div>
+                                <div><div class="stat-value" id="messages-non-lus">0</div><div class="stat-label">Messages</div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Prochains rendez-vous -->
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <h5><i class="fas fa-calendar-alt me-2" style="color: var(--patient);"></i>Vos prochains rendez-vous</h5>
+                        <a href="#" onclick="voirTousRdv()">Voir tout</a>
+                    </div>
+                    <div class="row" id="prochains-rdv-container">
+                        <div class="col-12 text-center text-muted py-4">Aucun rendez-vous prévu</div>
+                    </div>
+                </div>
+                
+                <!-- Dernières prescriptions et messages -->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card-custom">
+                            <div class="card-header-custom">
+                                <h5><i class="fas fa-prescription me-2" style="color: var(--success);"></i>Dernières prescriptions</h5>
+                            </div>
+                            <div id="dernieres-prescriptions-container">
+                                <p class="text-muted text-center py-3">Aucune prescription</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card-custom">
+                            <div class="card-header-custom">
+                                <h5><i class="fas fa-envelope me-2" style="color: var(--patient);"></i>Messages récents</h5>
+                            </div>
+                            <div id="messages-recents-container">
+                                <p class="text-muted text-center py-3">Aucun message</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECTION RENDEZ-VOUS -->
+            <div id="patient-rendezvous" class="patient-section">
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <h5><i class="fas fa-calendar-alt me-2" style="color: var(--patient);"></i>Mes rendez-vous</h5>
+                        <button class="btn btn-primary btn-sm" onclick="prendreRendezVous()">Nouveau RDV</button>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead><tr><th>Date</th><th>Heure</th><th>Médecin</th><th>Motif</th><th>Statut</th></tr></thead>
+                            <tbody id="rendezvous-table-body">
+                                <tr><td colspan="5" class="text-center text-muted">Aucun rendez-vous</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECTION DOSSIER MEDICAL -->
+            <div id="patient-dossier" class="patient-section">
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <h5><i class="fas fa-folder-open me-2" style="color: var(--patient);"></i>Mon dossier médical</h5>
+                    </div>
+                    <div id="dossier-container">
+                        <p class="text-muted">Informations à venir</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECTION PRESCRIPTIONS -->
+            <div id="patient-prescriptions" class="patient-section">
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <h5><i class="fas fa-prescription me-2" style="color: var(--success);"></i>Mes prescriptions</h5>
+                    </div>
+                    <div id="toutes-prescriptions-container">
+                        <p class="text-muted">Aucune prescription</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECTION FACTURES -->
+            <div id="patient-factures" class="patient-section">
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <h5><i class="fas fa-file-invoice me-2" style="color: var(--warning);"></i>Mes factures</h5>
+                    </div>
+                    <div id="factures-table-body">
+                        <p class="text-muted">Aucune facture</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECTION MESSAGES -->
+            <div id="patient-messages" class="patient-section">
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <h5><i class="fas fa-envelope me-2" style="color: var(--patient);"></i>Messagerie</h5>
+                        <button class="btn btn-primary btn-sm" onclick="nouveauMessage()">Nouveau message</button>
+                    </div>
+                    <div id="tous-messages-container">
+                        <p class="text-muted">Aucun message</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- SECTION DOCUMENTS -->
+            <div id="patient-documents" class="patient-section">
+                <div class="card-custom">
+                    <div class="card-header-custom">
+                        <h5><i class="fas fa-file-pdf me-2" style="color: var(--danger);"></i>Mes documents</h5>
+                        <button class="btn btn-primary btn-sm" onclick="uploadDocument()">Uploader</button>
+                    </div>
+                    <div id="documents-container">
+                        <p class="text-muted">Aucun document</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentPatientId = null;
+    
+    function updateDate() {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        document.getElementById('current-date').textContent = new Date().toLocaleDateString('fr-FR', options);
+    }
+    
+    function showPatientSection(section) {
+        document.querySelectorAll('.patient-section').forEach(s => s.classList.remove('active'));
+        document.getElementById('patient-' + section).classList.add('active');
+        
+        document.querySelectorAll('.patient-menu a').forEach(link => link.classList.remove('active'));
+        const links = document.querySelectorAll('.patient-menu a');
+        for (let link of links) {
+            if (link.getAttribute('onclick')?.includes(section)) {
+                link.classList.add('active');
+                break;
+            }
+        }
+    }
+    
+    async function loadPatientData() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        window.location.href = 'index.html';
+        return;
+    }
+
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        currentPatientId = payload.id;
+
+        // Récupérer les infos du patient depuis l'API
+        const response = await fetch(`http://localhost:8080/api/beneficiaires/${currentPatientId}`);
+        const patient = await response.json();
+
+        // Mettre à jour l'interface
+        document.getElementById('user-name').textContent = `${patient.prenom || ''} ${patient.nom || ''}`;
+        document.getElementById('user-info').textContent = `N° ${currentPatientId}`;
+        document.getElementById('sidebar-name').textContent = `${patient.prenom || ''} ${patient.nom || ''}`;
+        document.getElementById('sidebar-email').textContent = patient.email || 'Non renseigné';
+        document.getElementById('sidebar-phone').textContent = patient.telephone || 'Non renseigné';
+        document.getElementById('sidebar-id').textContent = currentPatientId;
+
+        const initiales = (patient.prenom?.[0] || 'P') + (patient.nom?.[0] || '');
+        document.getElementById('user-initials').textContent = initiales;
+        document.getElementById('sidebar-avatar').textContent = initiales;
+
+        // Récupérer les vrais rendez-vous
+        await chargerRendezVous(currentPatientId);
+
+        // Récupérer les vraies prescriptions
+        await chargerPrescriptions(currentPatientId);
+
+        // Récupérer les vraies factures
+        await chargerFactures(currentPatientId);
+
+    } catch (e) {
+        console.error('Erreur chargement patient:', e);
+        window.location.href = 'index.html';
+    }
+}
+async function chargerRendezVous(patientId) {
+    try {
+        const response = await fetch(`http://localhost:8080/api/rendez-vous/patient/${patientId}`);
+        const rdvs = await response.json();
+        const container = document.getElementById('prochains-rdv-container');
+        
+        if (rdvs && rdvs.length > 0) {
+            container.innerHTML = rdvs.map(r => `
+                <div class="col-md-6">
+                    <div class="consultation-card">
+                        <div><strong>${new Date(r.date_rdv).toLocaleDateString()} ${new Date(r.date_rdv).toLocaleTimeString()}</strong> - ${r.medecin_nom || 'Médecin'}</div>
+                        <div>${r.motif || 'Consultation'}</div>
+                        <span class="badge-custom badge-success">${r.statut}</span>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('prochains-rdv').textContent = rdvs.length;
+        } else {
+            container.innerHTML = '<div class="col-12 text-center text-muted py-4">Aucun rendez-vous prévu</div>';
+        }
+    } catch (e) {
+        console.error('Erreur chargement rendez-vous:', e);
+    }
+}
+
+async function chargerPrescriptions(patientId) {
+    try {
+        const response = await fetch(`http://localhost:8080/api/prescriptions/patient/${patientId}`);
+        const prescriptions = await response.json();
+        const container = document.getElementById('dernieres-prescriptions-container');
+        
+        if (prescriptions && prescriptions.length > 0) {
+            container.innerHTML = prescriptions.map(p => `
+                <div class="prescription-card">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <div class="prescription-title">${p.medicament}</div>
+                            <div class="prescription-date">Prescrit le ${new Date(p.date_prescription).toLocaleDateString()}</div>
+                        </div>
+                        <div class="prescription-doctor">${p.medecin_nom || 'Médecin'}</div>
+                    </div>
+                    <div class="mt-2 small">
+                        <span class="badge bg-warning">${p.statut}</span>
+                        <span class="ms-2">${p.posologie}</span>
+                    </div>
+                </div>
+            `).join('');
+            document.getElementById('prescriptions-actives').textContent = prescriptions.length;
+        } else {
+            container.innerHTML = '<p class="text-center text-muted py-3">Aucune prescription</p>';
+        }
+    } catch (e) {
+        console.error('Erreur chargement prescriptions:', e);
+    }
+}
+
+async function chargerFactures(patientId) {
+    try {
+        const response = await fetch(`http://localhost:8080/api/factures/patient/${patientId}`);
+        const factures = await response.json();
+        const container = document.getElementById('factures-table-body');
+        
+        if (factures && factures.length > 0) {
+            container.innerHTML = factures.map(f => `
+                <div class="consultation-card mb-2">
+                    <strong>Facture ${f.numero || f.id_facture}</strong><br>
+                    Date : ${new Date(f.date_emission).toLocaleDateString()}<br>
+                    Montant : ${f.montant_ttc} FCFA<br>
+                    <span class="badge-custom badge-${f.statut === 'payee' ? 'success' : 'warning'}">${f.statut}</span>
+                </div>
+            `).join('');
+            document.getElementById('factures-attente').textContent = factures.filter(f => f.statut !== 'payee').length;
+        } else {
+            container.innerHTML = '<p class="text-muted text-center py-3">Aucune facture</p>';
+        }
+    } catch (e) {
+        console.error('Erreur chargement factures:', e);
+    }
+}
+    
+    function prendreRendezVous() {    window.location.href = 'ajout-rendezvous.html';}
+   function consulterDossier() {    window.location.href = 'dossier-patient.html';}
+    function contacterMedecin() { alert('Formulaire de contact médecin'); }
+    function payerFacture() { showPatientSection('factures'); }
+    function voirTousRdv() {    window.location.href = 'mes-rdv.html';}
+   function voirMessages() {    window.location.href = 'messages-patient.html';}
+   function voirDocuments() {    window.location.href = 'documents-patient.html';}
+    function prescriptions() {    window.location.href = 'prescriptions-patient.html';}
+    function deconnexion() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = 'index.html'; }
+   function voirFactures() {
+    console.log('voirFactures() appelée');
+    window.location.href = 'factures-patient.html';
+}
+
+    document.addEventListener('DOMContentLoaded', function() {
+        updateDate();
+        loadPatientData();
+        setInterval(updateDate, 60000);
+    });
+</script>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+</body>
+</html>
