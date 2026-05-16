@@ -341,7 +341,7 @@
         currentPatientId = payload.id;
 
         // Récupérer les infos du patient depuis l'API
-        const response = await fetch(`http://localhost:8080/api/beneficiaires/${currentPatientId}`);
+        const response = await fetch(`https://clinique-hoteliere-et-actions.onrender.com/api/beneficiaires/${currentPatientId}`);
         const patient = await response.json();
 
         // Mettre à jour l'interface
@@ -372,7 +372,7 @@
 }
 async function chargerRendezVous(patientId) {
     try {
-        const response = await fetch(`http://localhost:8080/api/rendez-vous/patient/${patientId}`);
+        const response = await fetch(`https://clinique-hoteliere-et-actions.onrender.com/api/rendez-vous/patient/${patientId}`);
         const rdvs = await response.json();
         const container = document.getElementById('prochains-rdv-container');
         
@@ -397,7 +397,7 @@ async function chargerRendezVous(patientId) {
 
 async function chargerPrescriptions(patientId) {
     try {
-        const response = await fetch(`http://localhost:8080/api/prescriptions/patient/${patientId}`);
+        const response = await fetch(`https://clinique-hoteliere-et-actions.onrender.com/api/prescriptions/patient/${patientId}`);
         const prescriptions = await response.json();
         const container = document.getElementById('dernieres-prescriptions-container');
         
@@ -428,7 +428,7 @@ async function chargerPrescriptions(patientId) {
 
 async function chargerFactures(patientId) {
     try {
-        const response = await fetch(`http://localhost:8080/api/factures/patient/${patientId}`);
+        const response = await fetch(`https://clinique-hoteliere-et-actions.onrender.com/api/factures/patient/${patientId}`);
         const factures = await response.json();
         const container = document.getElementById('factures-table-body');
         
