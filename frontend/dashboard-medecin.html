@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="/js/api.js"></script>
+    <script src="js/api.js"></script>
 </head>
 
 <body>
@@ -49,9 +49,7 @@
             </div>
         </div>
 
-        <div class="row mb-4" id="statsRow">
-            <!-- les stats seront injectées ici par JS -->
-        </div>
+        <div class="row mb-4" id="statsRow"></div>
 
         <div class="card-custom">
             <div class="card-header-custom">
@@ -76,66 +74,92 @@
 
     <script>
         (async function () {
-    try {
-        // 1. Récupérer les vraies statistiques
-        const stats = await API.getStats();
+            // ========== VÉRIFICATION DU TOKEN ET DU RÔLE ==========
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'index.html';
+                return;
+            }
 
-        // 2. Récupérer les vraies consultations (avec jointure)
-        const consultations = await API.getConsultations();
+            try {
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                const role = payload.role;
 
-        // 3. Récupérer les vrais rendez-vous (avec jointure)
-        const rdvs = await API.getRendezVous();
+                // Vérification que l'utilisateur a bien le rôle 'medecin'
+                if (role !== 'medecin') {
+                    alert('Accès non autorisé. Vous n\'avez pas les droits médecin.');
+                    window.location.href = 'index.html';
+                    return;
+                }
 
-        // Affichage des stats
-        const statsRow = document.getElementById('statsRow');
-        statsRow.innerHTML = `
-            <div class="col-md-3">
-                <div class="stat-card"><div class="stat-value">${stats.consultations_jour || 0}</div><div class="stat-label">Consultations</div></div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" style="border-left-color: #27ae60;"><div class="stat-value">${stats.patients_total || 0}</div><div class="stat-label">Patients</div></div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" style="border-left-color: #f39c12;"><div class="stat-value">${stats.rdv_jour || 0}</div><div class="stat-label">Rendez-vous</div></div>
-            </div>
-            <div class="col-md-3">
-                <div class="stat-card" style="border-left-color: #e74c3c;"><div class="stat-value">${stats.rdv_attente || 0}</div><div class="stat-label">En attente</div></div>
-            </div>
-        `;
+                // Si tout est OK, on affiche le nom du médecin (optionnel)
+                if (payload.nom && payload.prenom) {
+                    document.getElementById('doctorName').textContent = `Dr. ${payload.prenom} ${payload.nom}`;
+                }
+            } catch (e) {
+                console.error('Token invalide', e);
+                window.location.href = 'index.html';
+                return;
+            }
 
-        // Affichage des consultations
-        const consContainer = document.getElementById('consultationsContainer');
-        if (consultations.length) {
-            consContainer.innerHTML = consultations.map(c => `
-                <div class="consultation-card">
-                    <div><strong>${new Date(c.date_heure).toLocaleString()}</strong></div>
-                    <div>Patient : ${c.patientNom || '?'} ${c.patientPrenom || '?'}</div>
-                    <div class="text-muted">Motif : ${c.motif || 'Non précisé'}</div>
-                    <span class="badge-custom badge-${c.statut === 'realisee' ? 'success' : 'warning'}">${c.statut}</span>
-                </div>
-            `).join('');
-        } else {
-            consContainer.innerHTML = '<p class="text-center text-muted">Aucune consultation récente</p>';
-        }
+            // ========== CHARGEMENT DES DONNÉES ==========
+            try {
+                const stats = await API.getStats();
+                const consultations = await API.getConsultations();
+                const rdvs = await API.getRendezVous();
 
-        // Affichage des rendez-vous
-        const rdvContainer = document.getElementById('rdvContainer');
-        if (rdvs.length) {
-            rdvContainer.innerHTML = rdvs.map(r => `
-                <div class="consultation-card">
-                    <div><strong>${new Date(r.date_rdv).toLocaleString()}</strong> - ${r.nom} ${r.prenom}</div>
-                    <div class="text-muted">Motif : ${r.motif || 'Consultation'}</div>
-                    <span class="badge-custom badge-${r.statut === 'confirmé' ? 'success' : 'warning'}">${r.statut}</span>
-                </div>
-            `).join('');
-        } else {
-            rdvContainer.innerHTML = '<p class="text-center text-muted">Aucun rendez-vous prévu</p>';
-        }
+                // Affichage des stats
+                const statsRow = document.getElementById('statsRow');
+                statsRow.innerHTML = `
+                    <div class="col-md-3">
+                        <div class="stat-card"><div class="stat-value">${stats.consultations_jour || 0}</div><div class="stat-label">Consultations</div></div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="border-left-color: #27ae60;"><div class="stat-value">${stats.patients_total || 0}</div><div class="stat-label">Patients</div></div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="border-left-color: #f39c12;"><div class="stat-value">${stats.rdv_jour || 0}</div><div class="stat-label">Rendez-vous</div></div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="border-left-color: #e74c3c;"><div class="stat-value">${stats.rdv_attente || 0}</div><div class="stat-label">En attente</div></div>
+                    </div>
+                `;
 
-    } catch (e) {
-        console.error('Erreur chargement dashboard médecin :', e);
-    }
-})();
+                // Affichage des consultations
+                const consContainer = document.getElementById('consultationsContainer');
+                if (consultations.length) {
+                    consContainer.innerHTML = consultations.map(c => `
+                        <div class="consultation-card">
+                            <div><strong>${new Date(c.date_heure).toLocaleString()}</strong></div>
+                            <div>Patient : ${c.patientNom || '?'} ${c.patientPrenom || '?'}</div>
+                            <div class="text-muted">Motif : ${c.motif || 'Non précisé'}</div>
+                            <span class="badge-custom badge-${c.statut === 'realisee' ? 'success' : 'warning'}">${c.statut}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    consContainer.innerHTML = '<p class="text-center text-muted">Aucune consultation récente</p>';
+                }
+
+                // Affichage des rendez-vous
+                const rdvContainer = document.getElementById('rdvContainer');
+                if (rdvs.length) {
+                    rdvContainer.innerHTML = rdvs.map(r => `
+                        <div class="consultation-card">
+                            <div><strong>${new Date(r.date_rdv).toLocaleString()}</strong> - ${r.nom} ${r.prenom}</div>
+                            <div class="text-muted">Motif : ${r.motif || 'Consultation'}</div>
+                            <span class="badge-custom badge-${r.statut === 'confirmé' ? 'success' : 'warning'}">${r.statut}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    rdvContainer.innerHTML = '<p class="text-center text-muted">Aucun rendez-vous prévu</p>';
+                }
+
+            } catch (e) {
+                console.error('Erreur chargement dashboard médecin :', e);
+                document.getElementById('consultationsContainer').innerHTML = '<p class="text-danger">Erreur chargement des données</p>';
+                document.getElementById('rdvContainer').innerHTML = '<p class="text-danger">Erreur chargement des rendez-vous</p>';
+            }
+        })();
     </script>
 </body>
 

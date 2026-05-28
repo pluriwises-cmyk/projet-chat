@@ -1,0 +1,1552 @@
+
+
+=== FICHIER: admissions.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    const query = `
+        SELECT a.*, b.nom, b.prenom 
+        FROM admissions a
+        LEFT JOIN beneficiaire b ON a.id_beneficiaire = b.id_beneficiaire
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+// POST ajouter une admission
+router.post('/', (req, res) => {
+    const { id_beneficiaire, service, medecin, statut } = req.body;
+    if (!id_beneficiaire || !service) {
+        return res.status(400).json({ error: "Patient et service requis" });
+    }
+    db.run(
+        `INSERT INTO admissions (id_beneficiaire, service, medecin, statut, date_admission)
+         VALUES (?, ?, ?, ?, datetime('now'))`,
+        [id_beneficiaire, service, medecin, statut || 'en_attente'],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Admission enregistrée" });
+            }
+        }
+    );
+});
+
+module.exports = router;
+
+=== FICHIER: beneficiaires.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+const jwt = require('jsonwebtoken');
+
+const JWT_SECRET = 'hopital_saint_jean_secret_key';
+
+// GET tous les bénéficiaires
+router.get('/', (req, res) => {
+    db.all('SELECT * FROM beneficiaire', [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+
+// GET un bénéficiaire par ID
+router.get('/:id', (req, res) => {
+    db.get('SELECT * FROM beneficiaire WHERE id_beneficiaire = ?', [req.params.id], (err, row) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else if (!row) {
+            res.status(404).json({ error: "Bénéficiaire non trouvé" });
+        } else {
+            res.json(row);
+        }
+    });
+});
+
+// POST ajouter un bénéficiaire (ancienne méthode)
+router.post('/', (req, res) => {
+    const { nom, prenom, telephone, email, adresse } = req.body;
+    if (!nom || !prenom) {
+        return res.status(400).json({ error: "Nom et prénom requis" });
+    }
+    db.run(
+        'INSERT INTO beneficiaire (nom, prenom, telephone, email, adresse) VALUES (?, ?, ?, ?, ?)',
+        [nom, prenom, telephone, email, adresse],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                const idBeneficiaire = this.lastID;
+                const token = jwt.sign(
+                    { id: idBeneficiaire, telephone: telephone, role: 'patient', type: 'patient' },
+                    JWT_SECRET,
+                    { expiresIn: '7d' }
+                );
+                res.status(201).json({
+                    id: idBeneficiaire,
+                    message: "Patient ajouté",
+                    token: token
+                });
+            }
+        }
+    );
+});
+
+// POST /api/beneficiaires/inscription (pour les nouveaux patients)
+router.post('/inscription', (req, res) => {
+    const { nom, prenom, telephone, email, adresse } = req.body;
+
+    if (!nom || !prenom || !telephone) {
+        return res.status(400).json({ error: 'Nom, prénom et téléphone requis' });
+    }
+
+    db.run(
+        `INSERT INTO beneficiaire (nom, prenom, telephone, email, adresse, type, statut)
+         VALUES (?, ?, ?, ?, ?, 'patient', 'actif')`,
+        [nom, prenom, telephone, email, adresse],
+        function(err) {
+            if (err) {
+                console.error('Erreur insertion:', err);
+                return res.status(500).json({ error: err.message });
+            }
+
+            const token = jwt.sign(
+                { id: this.lastID, telephone: telephone, role: 'patient', type: 'patient' },
+                JWT_SECRET,
+                { expiresIn: '7d' }
+            );
+
+            res.json({
+                success: true,
+                message: 'Inscription réussie',
+                token: token,
+                id: this.lastID
+            });
+        }
+    );
+});
+
+module.exports = router;
+
+=== FICHIER: chambres.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    db.all('SELECT * FROM chambre', [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+// POST ajouter une chambre
+router.post('/', (req, res) => {
+    const { numero, type, capacite, statut } = req.body;
+    if (!numero) {
+        return res.status(400).json({ error: "Numéro de chambre requis" });
+    }
+    db.run(
+        `INSERT INTO chambre (numero, type, capacite, statut)
+         VALUES (?, ?, ?, ?)`,
+        [numero, type || 'standard', capacite || 1, statut || 'libre'],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Chambre ajoutée" });
+            }
+        }
+    );
+});
+
+module.exports = router;
+
+=== FICHIER: commandes.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    const query = `
+        SELECT c.*, b.nom, b.prenom 
+        FROM commande_restauration c
+        LEFT JOIN beneficiaire b ON c.id_beneficiaire = b.id_beneficiaire
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+// POST ajouter une commande repas
+router.post('/', (req, res) => {
+    const { id_beneficiaire, type_service, regime, instructions } = req.body;
+    if (!id_beneficiaire || !type_service) {
+        return res.status(400).json({ error: "Patient et type de service requis" });
+    }
+    db.run(
+        `INSERT INTO commande_restauration (id_beneficiaire, type_service, regime, instructions, statut)
+         VALUES (?, ?, ?, ?, 'en_cuisine')`,
+        [id_beneficiaire, type_service, regime, instructions],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Commande enregistrée" });
+            }
+        }
+    );
+});
+
+module.exports = router;
+
+=== FICHIER: constantes.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+// GET toutes les constantes avec noms des patients
+router.get('/', (req, res) => {
+    const query = `
+        SELECT c.*, b.nom, b.prenom 
+        FROM constantes c
+        LEFT JOIN beneficiaire b ON c.id_beneficiaire = b.id_beneficiaire
+        ORDER BY c.date_prise DESC
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+
+// POST ajouter une constante
+router.post('/', (req, res) => {
+    const { id_beneficiaire, tension, pouls, temperature, saturation } = req.body;
+    if (!id_beneficiaire) {
+        return res.status(400).json({ error: "Patient requis" });
+    }
+    db.run(
+        `INSERT INTO constantes (id_beneficiaire, tension, pouls, temperature, saturation, date_prise)
+         VALUES (?, ?, ?, ?, ?, datetime('now'))`,
+        [id_beneficiaire, tension, pouls, temperature, saturation],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Constante enregistrée" });
+            }
+        }
+    );
+});
+
+module.exports = router;
+
+=== FICHIER: consultations.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+// GET toutes les consultations
+router.get('/', (req, res) => {
+    const query = `
+        SELECT c.*, b.nom as patientNom, b.prenom as patientPrenom 
+        FROM consultation c
+        LEFT JOIN beneficiaire b ON c.id_beneficiaire = b.id_beneficiaire
+        ORDER BY c.date_heure DESC
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+
+// GET une consultation par ID
+router.get('/details/:id', (req, res) => {
+    const id = req.params.id;
+    const query = `
+        SELECT c.*, b.nom, b.prenom 
+        FROM consultation c
+        LEFT JOIN beneficiaire b ON c.id_beneficiaire = b.id_beneficiaire
+        WHERE c.id_consultation = ?
+    `;
+    db.get(query, [id], (err, row) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else if (!row) {
+            res.status(404).json({ error: "Consultation non trouvée" });
+        } else {
+            res.json(row);
+        }
+    });
+});
+
+// POST ajouter une consultation
+router.post('/', (req, res) => {
+    const { id_beneficiaire, id_medecin, date_heure, motif, type, statut } = req.body;
+    if (!id_beneficiaire || !id_medecin || !date_heure) {
+        return res.status(400).json({ error: "Patient, médecin et date requis" });
+    }
+    db.run(
+        `INSERT INTO consultation (id_beneficiaire, id_medecin, date_heure, motif, type, statut)
+         VALUES (?, ?, ?, ?, ?, ?)`,
+        [id_beneficiaire, id_medecin, date_heure, motif, type || 'presentiel', statut || 'planifiee'],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Consultation ajoutée" });
+            }
+        }
+    );
+});
+// GET /api/consultations/medecin/:id
+router.get('/medecin/:id', (req, res) => {
+    const medecinId = req.params.id;
+    
+    const query = `
+        SELECT c.*, 
+               b.nom as patient_nom, 
+               b.prenom as patient_prenom
+        FROM consultation c
+        LEFT JOIN beneficiaire b ON c.id_beneficiaire = b.id_beneficiaire
+        WHERE c.id_medecin = ?
+        ORDER BY c.date_heure DESC
+        LIMIT 10
+    `;
+    
+    db.all(query, [medecinId], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(rows || []);
+    });
+});
+// POST /api/consultations
+router.post('/', (req, res) => {
+    const { id_beneficiaire, id_medecin, date_heure, type, motif, statut } = req.body;
+    
+    if (!id_beneficiaire || !id_medecin || !date_heure) {
+        return res.status(400).json({ error: 'Patient, médecin et date requis' });
+    }
+    
+    const query = `
+        INSERT INTO consultation (id_beneficiaire, id_medecin, date_heure, type, motif, statut)
+        VALUES (?, ?, ?, ?, ?, ?)
+    `;
+    
+    db.run(query, [id_beneficiaire, id_medecin, date_heure, type || 'presentiel', motif || '', statut || 'planifiee'], function(err) {
+        if (err) {
+            console.error('Erreur:', err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ success: true, id: this.lastID });
+    });
+});
+
+module.exports = router;
+
+=== FICHIER: courses.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    const query = `
+        SELECT c.*, v.immatriculation, p.nom as chauffeur_nom, p.prenom as chauffeur_prenom, b.nom as patient_nom, b.prenom as patient_prenom
+        FROM course c
+        LEFT JOIN vehicule v ON c.id_vehicule = v.id_vehicule
+        LEFT JOIN personnel p ON c.id_chauffeur = p.id_personnel
+        LEFT JOIN beneficiaire b ON c.id_beneficiaire = b.id_beneficiaire
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+// POST ajouter une course
+router.post('/', (req, res) => {
+    const { id_vehicule, id_chauffeur, id_beneficiaire, date_depart, lieu_depart, destination, type } = req.body;
+    if (!id_vehicule || !id_chauffeur || !id_beneficiaire || !date_depart || !lieu_depart || !destination) {
+        return res.status(400).json({ error: "Tous les champs sauf type sont requis" });
+    }
+    db.run(
+        `INSERT INTO course (id_vehicule, id_chauffeur, id_beneficiaire, date_depart, lieu_depart, destination, type, statut)
+         VALUES (?, ?, ?, ?, ?, ?, ?, 'planifiee')`,
+        [id_vehicule, id_chauffeur, id_beneficiaire, date_depart, lieu_depart, destination, type || 'sanitaire'],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Course planifiée" });
+            }
+        }
+    );
+});
+// GET /api/courses/chauffeur/:id
+router.get('/chauffeur/:id', (req, res) => {
+    const chauffeurId = req.params.id;
+    
+    const query = `
+        SELECT c.*, v.immatriculation, b.nom as patient_nom, b.prenom as patient_prenom
+        FROM course c
+        LEFT JOIN vehicule v ON c.id_vehicule = v.id_vehicule
+        LEFT JOIN beneficiaire b ON c.id_beneficiaire = b.id_beneficiaire
+        WHERE c.id_chauffeur = ?
+        ORDER BY c.date_depart ASC
+    `;
+    
+    db.all(query, [chauffeurId], (err, rows) => {
+        if (err) return res.status(500).json({ error: err.message });
+        res.json(rows || []);
+    });
+});
+
+module.exports = router;
+
+=== FICHIER: documents.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+// GET /api/documents/patient/:id
+router.get('/patient/:id', (req, res) => {
+    const patientId = req.params.id;
+    
+    const query = `
+        SELECT * FROM documents 
+        WHERE id_beneficiaire = ?
+        ORDER BY date_upload DESC
+    `;
+    
+    db.all(query, [patientId], (err, rows) => {
+        if (err) {
+            console.error('Erreur DB:', err);
+            return res.status(500).json({ error: err.message });
+        }
+        
+        // Si aucun document, retourner un tableau vide
+        res.json(rows || []);
+    });
+});
+
+// POST /api/documents (upload - à implémenter plus tard)
+router.post('/', (req, res) => {
+    res.json({ message: 'Upload à venir' });
+});
+
+module.exports = router;
+
+=== FICHIER: dossiersMedicaux.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+// GET tous les dossiers
+router.get('/', (req, res) => {
+    const query = `
+        SELECT d.*, b.nom, b.prenom 
+        FROM dossier_medical d
+        LEFT JOIN beneficiaire b ON d.id_beneficiaire = b.id_beneficiaire
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+
+// GET dossier d'un patient spécifique (AJOUTE CETTE ROUTE)
+router.get('/patient/:id', (req, res) => {
+    const patientId = req.params.id;
+    
+    const query = `
+        SELECT d.* 
+        FROM dossier_medical d
+        WHERE d.id_beneficiaire = ?
+    `;
+    
+    db.get(query, [patientId], (err, row) => {
+        if (err) {
+            console.error('Erreur DB:', err);
+            return res.status(500).json({ error: err.message });
+        }
+        
+        if (!row) {
+            // Aucun dossier trouvé - retourner des valeurs par défaut
+            return res.json({
+                groupe_sanguin: "Non renseigné",
+                allergies: "Aucune",
+                antecedents: "Aucun",
+                traitements_en_cours: "Aucun",
+                medecin_traitant: "Non renseigné"
+            });
+        }
+        
+        res.json({
+            groupe_sanguin: row.groupe_sanguin || "Non renseigné",
+            allergies: row.allergies || "Aucune",
+            antecedents: row.antecedents || "Aucun",
+            traitements_en_cours: row.traitements_en_cours || "Aucun",
+            medecin_traitant: row.medecin_traitant || "Non renseigné"
+        });
+    });
+});
+
+module.exports = router;
+
+=== FICHIER: factures.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    const query = `
+        SELECT f.*, b.nom, b.prenom 
+        FROM facture f
+        LEFT JOIN beneficiaire b ON f.id_beneficiaire = b.id_beneficiaire
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+// GET factures d’un patient spécifique
+router.get('/patient/:id', (req, res) => {
+    const id = req.params.id;
+    const query = `
+        SELECT f.*, b.nom, b.prenom 
+        FROM facture f
+        LEFT JOIN beneficiaire b ON f.id_beneficiaire = b.id_beneficiaire
+        WHERE f.id_beneficiaire = ?
+        ORDER BY f.date_emission DESC
+    `;
+    db.all(query, [id], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+
+module.exports = router;
+
+=== FICHIER: indicateursQualite.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    db.all('SELECT * FROM indicateur_qualite', [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+
+module.exports = router;
+
+=== FICHIER: medicaments.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    const query = `
+        SELECT m.*, b.nom, b.prenom 
+        FROM medicaments m
+        LEFT JOIN beneficiaire b ON m.id_beneficiaire = b.id_beneficiaire
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+router.post('/', (req, res) => {
+    const { id_beneficiaire, medicament, posologie, horaire } = req.body;
+    if (!id_beneficiaire || !medicament) {
+        return res.status(400).json({ error: "Patient et médicament requis" });
+    }
+    db.run(
+        `INSERT INTO medicaments (id_beneficiaire, medicament, posologie, horaire, statut)
+         VALUES (?, ?, ?, ?, 'a_donner')`,
+        [id_beneficiaire, medicament, posologie, horaire],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Médicament ajouté" });
+            }
+        }
+    );
+});
+
+module.exports = router;
+
+=== FICHIER: messages.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+// GET /api/messages/patient/:id
+router.get('/patient/:id', (req, res) => {
+    const patientId = req.params.id;
+    
+    const query = `
+        SELECT m.*, 
+               p.nom as medecin_nom, 
+               p.prenom as medecin_prenom
+        FROM messages m
+        LEFT JOIN personnel p ON m.id_medecin = p.id_personnel
+        WHERE m.id_beneficiaire = ?
+        ORDER BY m.date_envoi DESC
+    `;
+    
+    db.all(query, [patientId], (err, rows) => {
+        if (err) {
+            console.error('Erreur DB:', err);
+            return res.status(500).json({ error: err.message });
+        }
+        
+        res.json(rows || []);
+    });
+});
+
+// POST /api/messages (envoyer un message)
+router.post('/', (req, res) => {
+    const { id_beneficiaire, id_medecin, sujet, contenu } = req.body;
+    
+    if (!id_beneficiaire || !sujet || !contenu) {
+        return res.status(400).json({ error: 'Destinataire, sujet et contenu requis' });
+    }
+    
+    const query = `
+        INSERT INTO messages (id_beneficiaire, id_medecin, sujet, contenu, date_envoi, statut)
+        VALUES (?, ?, ?, ?, datetime('now'), 'non_lu')
+    `;
+    
+    db.run(query, [id_beneficiaire, id_medecin || null, sujet, contenu], function(err) {
+        if (err) {
+            console.error('Erreur insertion:', err);
+            return res.status(500).json({ error: err.message });
+        }
+        
+        res.json({
+            success: true,
+            id: this.lastID,
+            message: 'Message envoyé'
+        });
+    });
+});
+
+// PUT /api/messages/:id/lire (marquer comme lu)
+router.put('/:id/lire', (req, res) => {
+    const messageId = req.params.id;
+    
+    db.run('UPDATE messages SET statut = ? WHERE id_message = ?', ['lu', messageId], function(err) {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ success: true });
+    });
+});
+
+module.exports = router;
+
+=== FICHIER: parametres.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    db.all('SELECT * FROM parametre', [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+
+module.exports = router;
+
+=== FICHIER: personnel.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    db.all('SELECT * FROM personnel', [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+// GET tous les médecins
+router.get('/medecins', (req, res) => {
+    db.all("SELECT id_personnel, nom, prenom FROM personnel WHERE poste LIKE '%médecin%' OR poste LIKE '%Médecin%'", [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+// POST ajouter un membre du personnel
+router.post('/', (req, res) => {
+    const { nom, prenom, poste, email, telephone, date_embauche, statut } = req.body;
+    if (!nom || !prenom) {
+        return res.status(400).json({ error: "Nom et prénom requis" });
+    }
+    db.run(
+        `INSERT INTO personnel (nom, prenom, poste, email, telephone, date_embauche, statut)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        [nom, prenom, poste, email, telephone, date_embauche || null, statut || 'actif'],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Personnel ajouté" });
+            }
+        }
+    );
+});
+// GET /api/personnel/stats
+router.get('/stats', (req, res) => {
+    Promise.all([
+        new Promise((resolve, reject) => {
+            db.get('SELECT COUNT(*) as count FROM personnel WHERE poste = "medecin"', (err, row) => {
+                if (err) reject(err);
+                else resolve(row?.count || 0);
+            });
+        }),
+        new Promise((resolve, reject) => {
+            db.get('SELECT COUNT(*) as count FROM personnel WHERE poste = "infirmier"', (err, row) => {
+                if (err) reject(err);
+                else resolve(row?.count || 0);
+            });
+        }),
+        new Promise((resolve, reject) => {
+            db.get('SELECT COUNT(*) as count FROM personnel WHERE poste = "chauffeur"', (err, row) => {
+                if (err) reject(err);
+                else resolve(row?.count || 0);
+            });
+        })
+    ]).then(([medecins, infirmiers, chauffeurs]) => {
+        res.json({
+            medecins: medecins,
+            infirmiers: infirmiers,
+            chauffeurs: chauffeurs
+        });
+    }).catch(err => {
+        res.status(500).json({ error: err.message });
+    });
+});
+
+module.exports = router;
+
+=== FICHIER: planning.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    const query = `
+        SELECT p.*, pe.nom, pe.prenom 
+        FROM planning p
+        LEFT JOIN personnel pe ON p.id_personnel = pe.id_personnel
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+
+module.exports = router;
+
+=== FICHIER: prescriptions.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+// GET toutes les prescriptions avec noms des patients
+router.get('/', (req, res) => {
+    const query = `
+        SELECT p.*, b.nom, b.prenom 
+        FROM prescription p
+        LEFT JOIN beneficiaire b ON p.id_beneficiaire = b.id_beneficiaire
+        ORDER BY p.date_prescription DESC
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            console.error('Erreur SQL:', err.message);
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+
+// POST ajouter une prescription
+router.post('/', (req, res) => {
+    const { id_beneficiaire, medicament, posologie, statut } = req.body;
+    if (!id_beneficiaire || !medicament) {
+        return res.status(400).json({ error: "Patient et médicament requis" });
+    }
+    db.run(
+        `INSERT INTO prescription (id_beneficiaire, medicament, posologie, statut, date_prescription)
+         VALUES (?, ?, ?, ?, datetime('now'))`,
+        [id_beneficiaire, medicament, posologie, statut || 'en_cours'],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Prescription ajoutée" });
+            }
+        }
+    );
+});
+// GET prescriptions d’un patient spécifique
+router.get('/patient/:id', (req, res) => {
+    const id = req.params.id;
+    const query = `
+        SELECT p.*, b.nom, b.prenom 
+        FROM prescription p
+        LEFT JOIN beneficiaire b ON p.id_beneficiaire = b.id_beneficiaire
+        WHERE p.id_beneficiaire = ?
+        ORDER BY p.date_prescription DESC
+    `;
+    db.all(query, [id], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+// POST /api/prescriptions
+router.post('/', (req, res) => {
+    const { id_beneficiaire, id_medecin, medicament, posologie } = req.body;
+    
+    if (!id_beneficiaire || !medicament) {
+        return res.status(400).json({ error: 'Patient et médicament requis' });
+    }
+    
+    const query = `
+        INSERT INTO prescription (id_beneficiaire, id_medecin, medicament, posologie, date_prescription, statut)
+        VALUES (?, ?, ?, ?, datetime('now'), 'en_cours')
+    `;
+    
+    db.run(query, [id_beneficiaire, id_medecin || null, medicament, posologie], function(err) {
+        if (err) {
+            console.error('Erreur:', err);
+            return res.status(500).json({ error: err.message });
+        }
+        res.json({ success: true, id: this.lastID });
+    });
+});
+
+module.exports = router;
+
+=== FICHIER: produits.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    db.all('SELECT * FROM produit', [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+
+module.exports = router;
+
+=== FICHIER: projets.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    db.all('SELECT * FROM projets', [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+// POST ajouter un projet
+router.post('/', (req, res) => {
+    const { nom, description, budget, avancement, statut } = req.body;
+    if (!nom) {
+        return res.status(400).json({ error: "Nom du projet requis" });
+    }
+    db.run(
+        `INSERT INTO projets (nom, description, budget, avancement, statut)
+         VALUES (?, ?, ?, ?, ?)`,
+        [nom, description, budget || 0, avancement || 0, statut || 'planifie'],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Projet ajouté" });
+            }
+        }
+    );
+});
+
+module.exports = router;
+
+=== FICHIER: rapports.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    db.all('SELECT * FROM rapport', [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+// POST ajouter un rapport
+router.post('/', (req, res) => {
+    const { nom, periode, taille, url } = req.body;
+    if (!nom || !periode || !taille || !url) {
+        return res.status(400).json({ error: "Tous les champs sont requis" });
+    }
+    db.run(
+        `INSERT INTO rapport (nom, periode, taille, url)
+         VALUES (?, ?, ?, ?)`,
+        [nom, periode, taille, url],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Rapport ajouté" });
+            }
+        }
+    );
+});
+
+module.exports = router;
+
+=== FICHIER: rendezVous.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    const query = `
+        SELECT r.*, b.nom, b.prenom 
+        FROM rendez_vous r
+        LEFT JOIN beneficiaire b ON r.id_beneficiaire = b.id_beneficiaire
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+// POST ajouter un rendez-vous
+router.post('/', (req, res) => {
+    const { id_beneficiaire, id_medecin, date_rdv, motif } = req.body;
+    if (!id_beneficiaire || !id_medecin || !date_rdv) {
+        return res.status(400).json({ error: "Tous les champs sont requis" });
+    }
+    db.run(
+        `INSERT INTO rendez_vous (id_beneficiaire, id_medecin, date_rdv, motif, statut)
+         VALUES (?, ?, ?, ?, 'planifie')`,
+        [id_beneficiaire, id_medecin, date_rdv, motif],
+        function(err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Rendez-vous ajouté" });
+            }
+        }
+    );
+});
+
+// POST ajouter un rendez-vous
+router.post('/', (req, res) => {
+    const { id_beneficiaire, id_medecin, date_rdv, motif } = req.body;
+    if (!id_beneficiaire || !id_medecin || !date_rdv) {
+        return res.status(400).json({ error: "Tous les champs sont requis" });
+    }
+    db.run(
+        `INSERT INTO rendez_vous (id_beneficiaire, id_medecin, date_rdv, motif, statut)
+         VALUES (?, ?, ?, ?, 'planifie')`,
+        [id_beneficiaire, id_medecin, date_rdv, motif],
+        function(err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Rendez-vous ajouté" });
+            }
+        }
+    );
+});
+// GET rendez-vous d’un patient spécifique
+router.get('/patient/:id', (req, res) => {
+    const id = req.params.id;
+    const query = `
+        SELECT r.*, b.nom, b.prenom 
+        FROM rendez_vous r
+        LEFT JOIN beneficiaire b ON r.id_beneficiaire = b.id_beneficiaire
+        WHERE r.id_beneficiaire = ?
+    `;
+    db.all(query, [id], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+// GET /api/rendez-vous/medecin/:id
+router.get('/medecin/:id', (req, res) => {
+    const medecinId = req.params.id;
+    
+    const query = `
+        SELECT r.*, 
+               b.nom, 
+               b.prenom
+        FROM rendez_vous r
+        LEFT JOIN beneficiaire b ON r.id_beneficiaire = b.id_beneficiaire
+        WHERE r.id_medecin = ?
+        ORDER BY r.date_rdv ASC
+        LIMIT 10
+    `;
+    
+    db.all(query, [medecinId], (err, rows) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        res.json(rows || []);
+    });
+});
+module.exports = router;
+
+=== FICHIER: soins.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    const query = `
+        SELECT s.*, b.nom, b.prenom 
+        FROM soins s
+        LEFT JOIN beneficiaire b ON s.id_beneficiaire = b.id_beneficiaire
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+// POST ajouter un soin
+router.post('/', (req, res) => {
+    const { id_beneficiaire, type_soin, urgent } = req.body;
+    if (!id_beneficiaire || !type_soin) {
+        return res.status(400).json({ error: "Patient et type de soin requis" });
+    }
+    db.run(
+        `INSERT INTO soins (id_beneficiaire, type_soin, urgent, statut, date_soin)
+         VALUES (?, ?, ?, 'programme', datetime('now'))`,
+        [id_beneficiaire, type_soin, urgent || 0],
+        function (err) {
+            if (err) {
+                res.status(500).json({ error: err.message });
+            } else {
+                res.status(201).json({ id: this.lastID, message: "Soin programmé" });
+            }
+        }
+    );
+});
+
+module.exports = router;
+
+=== FICHIER: specialistes.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    const query = `
+        SELECT s.*, p.nom, p.prenom, p.telephone, p.email 
+        FROM specialiste s
+        LEFT JOIN personnel p ON s.id_personnel = p.id_personnel
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+app.get('/api/specialistes', (req, res) => {
+    const query = `
+        SELECT s.id_specialiste, s.id_personnel, p.nom, p.prenom, 
+               s.specialite, s.photo_url, p.telephone, p.email, 
+               s.description, s.cv_url
+        FROM specialiste s
+        LEFT JOIN personnel p ON s.id_personnel = p.id_personnel
+    `;
+    db.all(query, [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+module.exports = router;
+
+=== FICHIER: statistiques.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+router.get('/dashboard', (req, res) => {
+    // Chiffre d'affaires mensuel (simulé)
+    const caMensuel = [3200000, 3500000, 3100000, 3800000, 4200000, 4500000];
+
+    // Répartition des dépenses (simulée)
+    const repartitionDepenses = {
+        salaires: 4100000,
+        medicaments: 2200000,
+        equipement: 1800000,
+        maintenance: 950000,
+        autres: 650000
+    };
+
+    // Stats générales (existantes)
+    db.get('SELECT COUNT(*) as total FROM beneficiaire', (err, row) => {
+        const patients_total = row?.total || 0;
+
+        db.get('SELECT COUNT(*) as total FROM consultation WHERE date_heure >= date("now")', (err, row) => {
+            const consultations_jour = row?.total || 12;
+
+            db.get('SELECT COUNT(*) as total FROM soins WHERE date_soin >= date("now")', (err, row) => {
+                const soins_attente = row?.total || 8;
+
+                db.get('SELECT COUNT(*) as total FROM admission WHERE date_admission >= date("now")', (err, row) => {
+                    const admissions_jour = row?.total || 5;
+
+                    db.get('SELECT COUNT(*) as total FROM facture WHERE statut = "impayee"', (err, row) => {
+                        const factures_impayees = row?.total || 12;
+
+                        db.get('SELECT SUM(montant_ttc) as total FROM facture WHERE statut = "payee"', (err, row) => {
+                            const ca_total = row?.total ? (row.total / 1e6).toFixed(1) + 'M' : '2.8M';
+
+                            db.get('SELECT COUNT(*) as total FROM chambre WHERE statut = "occupee"', (err, rowOcc) => {
+                                db.get('SELECT COUNT(*) as total FROM chambre', (err, rowTot) => {
+                                    const taux_occupation = rowTot?.total ? Math.round((rowOcc?.total || 0) / rowTot.total * 100) + '%' : '78%';
+
+                                    // Réponse finale avec les graphiques
+                                    res.json({
+                                        consultations_jour,
+                                        patients_total,
+                                        soins_attente,
+                                        admissions_jour,
+                                        factures_impayees,
+                                        ca_mensuel: ca_total,
+                                        taux_occupation,
+                                        // nouvelles données pour graphiques
+                                        graphiques: {
+                                            caMensuel,
+                                            repartitionDepenses
+                                        }
+                                    });
+                                });
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+});
+// GET /api/statistiques/medecin/:id
+router.get('/medecin/:id', (req, res) => {
+    const medecinId = req.params.id;
+    const today = new Date().toISOString().split('T')[0];
+    
+    // Compter les consultations du jour pour ce médecin
+    db.get(
+        'SELECT COUNT(*) as count FROM consultation WHERE id_medecin = ? AND date(date_heure) = ?',
+        [medecinId, today],
+        (err, consultations) => {
+            if (err) return res.status(500).json({ error: err.message });
+            
+            // Compter les patients distincts de ce médecin
+            db.get(
+                'SELECT COUNT(DISTINCT id_beneficiaire) as count FROM consultation WHERE id_medecin = ?',
+                [medecinId],
+                (err, patients) => {
+                    if (err) return res.status(500).json({ error: err.message });
+                    
+                    // Compter les rendez-vous du jour pour ce médecin
+                    db.get(
+                        'SELECT COUNT(*) as count FROM rendez_vous WHERE id_medecin = ? AND date(date_rdv) = ?',
+                        [medecinId, today],
+                        (err, rdvJour) => {
+                            if (err) return res.status(500).json({ error: err.message });
+                            
+                            // Compter les rendez-vous en attente pour ce médecin
+                            db.get(
+                                'SELECT COUNT(*) as count FROM rendez_vous WHERE id_medecin = ? AND statut = "planifie"',
+                                [medecinId],
+                                (err, rdvAttente) => {
+                                    if (err) return res.status(500).json({ error: err.message });
+                                    
+                                    res.json({
+                                        consultations_jour: consultations?.count || 0,
+                                        patients_total: patients?.count || 0,
+                                        rdv_jour: rdvJour?.count || 0,
+                                        rdv_attente: rdvAttente?.count || 0
+                                    });
+                                }
+                            );
+                        }
+                    );
+                }
+            );
+        }
+    );
+});
+module.exports = router;
+
+=== FICHIER: stats.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+// Statistiques globales (pour direction/boss)
+router.get('/dashboard', (req, res) => {
+    Promise.all([
+        new Promise((resolve, reject) => {
+            db.get('SELECT COUNT(*) as total FROM beneficiaire', (err, row) => {
+                if (err) reject(err);
+                else resolve(row?.total || 0);
+            });
+        }),
+        new Promise((resolve, reject) => {
+            db.get('SELECT COUNT(*) as total FROM consultation WHERE date(date_heure) = date("now")', (err, row) => {
+                if (err) reject(err);
+                else resolve(row?.total || 0);
+            });
+        }),
+        new Promise((resolve, reject) => {
+            db.get('SELECT COUNT(*) as total FROM rendez_vous WHERE date(date_rdv) = date("now")', (err, row) => {
+                if (err) reject(err);
+                else resolve(row?.total || 0);
+            });
+        }),
+        new Promise((resolve, reject) => {
+            db.get('SELECT SUM(montant_ttc) as total FROM facture WHERE statut = "payee"', (err, row) => {
+                if (err) reject(err);
+                else resolve(row?.total || 0);
+            });
+        })
+    ]).then(([patients, consultations, rendezVous, chiffreAffaire]) => {
+        res.json({
+            patients_total: patients,
+            consultations_jour: consultations,
+            rendez_vous_jour: rendezVous,
+            chiffre_affaire: chiffreAffaire
+        });
+    }).catch(err => {
+        res.status(500).json({ error: err.message });
+    });
+});
+
+// Statistiques par médecin
+router.get('/medecin/:id', (req, res) => {
+    const medecinId = req.params.id;
+    const today = new Date().toISOString().split('T')[0];
+    
+    db.get('SELECT COUNT(*) as count FROM consultation WHERE id_medecin = ? AND date(date_heure) = ?', 
+        [medecinId, today], (err, consultations) => {
+            db.get('SELECT COUNT(DISTINCT id_beneficiaire) as count FROM consultation WHERE id_medecin = ?', 
+                [medecinId], (err, patients) => {
+                    db.get('SELECT COUNT(*) as count FROM rendez_vous WHERE id_medecin = ? AND date(date_rdv) = ?', 
+                        [medecinId, today], (err, rdvJour) => {
+                            db.get('SELECT COUNT(*) as count FROM rendez_vous WHERE id_medecin = ? AND statut = "planifie"', 
+                                [medecinId], (err, rdvAttente) => {
+                                    res.json({
+                                        consultations_jour: consultations?.count || 0,
+                                        patients_total: patients?.count || 0,
+                                        rdv_jour: rdvJour?.count || 0,
+                                        rdv_attente: rdvAttente?.count || 0
+                                    });
+                                });
+                        });
+                });
+        });
+});
+
+module.exports = router;
+
+=== FICHIER: stocks.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    db.all('SELECT * FROM produit', [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+
+module.exports = router;
+
+=== FICHIER: vehicules.js ===
+const express = require('express');
+const router = express.Router();
+const db = require('../database/db');
+
+router.get('/', (req, res) => {
+    db.all('SELECT * FROM vehicule', [], (err, rows) => {
+        if (err) {
+            res.status(500).json({ error: err.message });
+        } else {
+            res.json(rows);
+        }
+    });
+});
+
+module.exports = router;
+
+=== FICHIER: whatsapp.js ===
+const express = require('express');
+const router = express.Router();
+const jwt = require('jsonwebtoken');
+const db = require('../database/db');
+
+const JWT_SECRET = 'hopital_saint_jean_secret_key';
+
+function generateCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+// Demander un code
+router.post('/request-code', (req, res) => {
+    console.log('📱 Demande de code reçue:', req.body);
+    const { telephone } = req.body;
+
+    if (!telephone) {
+        return res.status(400).json({ error: 'Téléphone requis' });
+    }
+
+    const code = generateCode();
+    const dateExpiration = new Date();
+    dateExpiration.setMinutes(dateExpiration.getMinutes() + 2);
+
+    console.log(`✅ Code généré pour ${telephone}: ${code}`);
+
+    db.run('DELETE FROM whatsapp_validation WHERE telephone = ?', [telephone]);
+
+    db.run(
+        `INSERT INTO whatsapp_validation (telephone, code, date_envoi, date_expiration, statut, tentative)
+         VALUES (?, ?, datetime('now'), ?, 'en_attente', 0)`,
+        [telephone, code, dateExpiration.toISOString()],
+        function (err) {
+            if (err) {
+                console.error('Erreur insertion:', err);
+                return res.status(500).json({ error: 'Erreur serveur' });
+            }
+
+            res.json({
+                success: true,
+                message: 'Code envoyé',
+                code_dev: code
+            });
+        }
+    );
+});
+
+// Vérifier le code
+router.post('/verify-code', (req, res) => {
+    console.log('🔍 Vérification code reçue:', req.body);
+    const { telephone, code } = req.body;
+
+    if (!telephone || !code) {
+        return res.status(400).json({ error: 'Téléphone et code requis' });
+    }
+
+    db.get(
+        `SELECT * FROM whatsapp_validation 
+         WHERE telephone = ? AND code = ? AND statut = 'en_attente'
+         ORDER BY id_validation DESC LIMIT 1`,
+        [telephone, code],
+        (err, validation) => {
+            if (err) {
+                console.error('Erreur DB:', err);
+                return res.status(500).json({ error: 'Erreur serveur' });
+            }
+
+            if (!validation) {
+                return res.status(400).json({ error: 'Code invalide' });
+            }
+
+            const dateExpiration = new Date(validation.date_expiration);
+            if (dateExpiration < new Date()) {
+                db.run('UPDATE whatsapp_validation SET statut = ? WHERE id_validation = ?',
+                    ['expire', validation.id_validation]);
+                return res.status(400).json({ error: 'Code expiré' });
+            }
+
+            db.run(
+                `UPDATE whatsapp_validation 
+                 SET statut = 'valide', date_validation = datetime('now')
+                 WHERE id_validation = ?`,
+                [validation.id_validation],
+                (err) => {
+                    if (err) {
+                        console.error('Erreur update:', err);
+                        return res.status(500).json({ error: 'Erreur serveur' });
+                    }
+
+                    // Vérifier d'abord dans personnel (médecins, infirmiers)
+                    db.get('SELECT * FROM personnel WHERE telephone = ?', [telephone], (err, personnel) => {
+                        if (err) {
+                            console.error('Erreur DB personnel:', err);
+                            return res.status(500).json({ error: 'Erreur serveur' });
+                        }
+
+                        if (personnel) {
+                            const role = personnel.poste || 'personnel';
+                            const token = jwt.sign(
+                                {
+                                    id: personnel.id_personnel,
+                                    telephone: personnel.telephone,
+                                    nom: personnel.nom,
+                                    prenom: personnel.prenom,
+                                    role: role,
+                                    type: 'personnel'
+                                },
+                                JWT_SECRET,
+                                { expiresIn: '7d' }
+                            );
+
+                            return res.json({
+                                success: true,
+                                message: 'Connexion réussie',
+                                token: token,
+                                role: role,
+                                user: {
+                                    id: personnel.id_personnel,
+                                    nom: personnel.nom,
+                                    prenom: personnel.prenom,
+                                    telephone: personnel.telephone,
+                                    role: role
+                                }
+                            });
+                        }
+
+                        // Sinon, vérifier dans beneficiaire (patients)
+                        db.get('SELECT * FROM beneficiaire WHERE telephone = ? OR whatsapp = ?',
+                            [telephone, telephone],
+                            (err, beneficiaire) => {
+                                if (err) {
+                                    console.error('Erreur DB beneficiaire:', err);
+                                    return res.status(500).json({ error: 'Erreur serveur' });
+                                }
+
+                                if (beneficiaire) {
+                                    const token = jwt.sign(
+                                        {
+                                            id: beneficiaire.id_beneficiaire,
+                                            telephone: beneficiaire.telephone,
+                                            nom: beneficiaire.nom,
+                                            prenom: beneficiaire.prenom,
+                                            role: 'patient',
+                                            type: 'patient'
+                                        },
+                                        JWT_SECRET,
+                                        { expiresIn: '7d' }
+                                    );
+                                    return res.json({
+                                        success: true,
+                                        message: 'Connexion réussie',
+                                        token: token,
+                                        role: 'patient'
+                                    });
+                                } else {
+                                    const tempToken = jwt.sign(
+                                        { telephone: telephone, type: 'temp' },
+                                        JWT_SECRET,
+                                        { expiresIn: '1h' }
+                                    );
+                                    return res.json({
+                                        success: true,
+                                        message: 'Code valide, inscription requise',
+                                        telephone: telephone,
+                                        tempToken: tempToken
+                                    });
+                                }
+                            }
+                        );
+                    });
+                }
+            );
+        }
+    );
+});
+
+module.exports = router;

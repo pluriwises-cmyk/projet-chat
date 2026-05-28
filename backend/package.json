@@ -4,8 +4,10 @@
   "description": "Backend Hôpital Saint-Jean",
   "main": "app.js",
   "scripts": {
+    
     "start": "node app.js",
-    "dev": "nodemon app.js"
+    "dev": "nodemon app.js",
+    "postinstall": "npm rebuild sqlite3"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

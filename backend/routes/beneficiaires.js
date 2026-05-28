@@ -29,7 +29,7 @@ router.get('/:id', (req, res) => {
     });
 });
 
-// POST ajouter un bénéficiaire
+// POST ajouter un bénéficiaire (ancienne méthode)
 router.post('/', (req, res) => {
     const { nom, prenom, telephone, email, adresse } = req.body;
     if (!nom || !prenom) {
@@ -43,9 +43,8 @@ router.post('/', (req, res) => {
                 res.status(500).json({ error: err.message });
             } else {
                 const idBeneficiaire = this.lastID;
-                // Générer un token pour le nouveau patient
                 const token = jwt.sign(
-                    { id: idBeneficiaire, telephone: telephone, role: 'patient' },
+                    { id: idBeneficiaire, telephone: telephone, role: 'patient', type: 'patient' },
                     JWT_SECRET,
                     { expiresIn: '7d' }
                 );
@@ -58,17 +57,15 @@ router.post('/', (req, res) => {
         }
     );
 });
-// POST /api/beneficiaires/inscription
+
+// POST /api/beneficiaires/inscription (pour les nouveaux patients)
 router.post('/inscription', (req, res) => {
-    const { nom, prenom, telephone, email, adresse, tempToken } = req.body;
-    
+    const { nom, prenom, telephone, email, adresse } = req.body;
+
     if (!nom || !prenom || !telephone) {
         return res.status(400).json({ error: 'Nom, prénom et téléphone requis' });
     }
-    
-    // Vérifier le token temporaire (optionnel)
-    
-    // Insérer le nouveau bénéficiaire
+
     db.run(
         `INSERT INTO beneficiaire (nom, prenom, telephone, email, adresse, type, statut)
          VALUES (?, ?, ?, ?, ?, 'patient', 'actif')`,
@@ -78,15 +75,13 @@ router.post('/inscription', (req, res) => {
                 console.error('Erreur insertion:', err);
                 return res.status(500).json({ error: err.message });
             }
-            
-            // Générer le token JWT
-            const jwt = require('jsonwebtoken');
+
             const token = jwt.sign(
-                { id: this.lastID, telephone: telephone, role: 'patient' },
-                'hopital_saint_jean_secret_key',
+                { id: this.lastID, telephone: telephone, role: 'patient', type: 'patient' },
+                JWT_SECRET,
                 { expiresIn: '7d' }
             );
-            
+
             res.json({
                 success: true,
                 message: 'Inscription réussie',
@@ -96,4 +91,5 @@ router.post('/inscription', (req, res) => {
         }
     );
 });
+
 module.exports = router;

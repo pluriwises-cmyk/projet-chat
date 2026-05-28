@@ -1,0 +1,495 @@
+BEGIN TRANSACTION;
+CREATE TABLE IF NOT EXISTS admissions (
+    id_admission INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER NOT NULL,
+    date_admission TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    service TEXT,
+    medecin TEXT,
+    statut TEXT DEFAULT 'en_attente',
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire)
+);
+CREATE TABLE IF NOT EXISTS authentification (
+    id_auth INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER NOT NULL,
+    numero_whatsapp TEXT NOT NULL,
+    code_validation TEXT(6),
+    date_envoi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    date_expiration TIMESTAMP,
+    statut TEXT DEFAULT 'en_attente' CHECK(statut IN ('en_attente', 'valide', 'expire')),
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire)
+);
+CREATE TABLE IF NOT EXISTS beneficiaire (
+    id_beneficiaire INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL,
+    prenom TEXT NOT NULL,
+    date_naissance TEXT, -- YYYY-MM-DD
+    email TEXT,
+    telephone TEXT,
+    whatsapp TEXT,
+    adresse TEXT,
+    type TEXT DEFAULT 'patient' CHECK(type IN ('patient', 'touriste', 'voyageur', 'mixte')),
+    date_inscription TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    statut TEXT DEFAULT 'actif' CHECK(statut IN ('actif', 'inactif'))
+);
+CREATE TABLE IF NOT EXISTS chambre (
+    id_chambre INTEGER PRIMARY KEY AUTOINCREMENT,
+    numero TEXT NOT NULL UNIQUE,
+    type TEXT DEFAULT 'standard' CHECK(type IN ('standard', 'medicalisee', 'suite')),
+    equipements TEXT,
+    capacite INTEGER DEFAULT 1,
+    statut TEXT DEFAULT 'libre' CHECK(statut IN ('libre', 'occupee', 'maintenance'))
+);
+CREATE TABLE IF NOT EXISTS commande_restauration (
+    id_commande INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER NOT NULL,
+    date_heure TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    type_service TEXT DEFAULT 'salle' CHECK(type_service IN ('salle', 'hospitalisation')),
+    regime TEXT,
+    instructions TEXT,
+    statut TEXT DEFAULT 'en_cuisine' CHECK(statut IN ('en_cuisine', 'pret', 'livre')),
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire)
+);
+CREATE TABLE IF NOT EXISTS constantes (
+    id_constante INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER NOT NULL,
+    date_prise TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    tension TEXT,
+    pouls INTEGER,
+    temperature REAL,
+    saturation INTEGER, chambre TEXT,
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire)
+);
+CREATE TABLE IF NOT EXISTS consultation (
+    id_consultation INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER NOT NULL,
+    id_medecin INTEGER NOT NULL,
+    date_heure TIMESTAMP NOT NULL,
+    type TEXT DEFAULT 'presentiel' CHECK(type IN ('presentiel', 'teleconsultation')),
+    motif TEXT,
+    compte_rendu TEXT,
+    statut TEXT DEFAULT 'planifiee' CHECK(statut IN ('planifiee', 'realisee', 'annulee')),
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire),
+    FOREIGN KEY (id_medecin) REFERENCES personnel(id_personnel)
+);
+CREATE TABLE IF NOT EXISTS course (
+    id_course INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_vehicule INTEGER NOT NULL,
+    id_chauffeur INTEGER NOT NULL,
+    id_beneficiaire INTEGER NOT NULL,
+    date_depart TIMESTAMP NOT NULL,
+    lieu_depart TEXT NOT NULL,
+    destination TEXT NOT NULL,
+    type TEXT DEFAULT 'sanitaire' CHECK(type IN ('sanitaire', 'touristique')),
+    statut TEXT DEFAULT 'planifiee' CHECK(statut IN ('planifiee', 'en_cours', 'terminee')),
+    FOREIGN KEY (id_vehicule) REFERENCES vehicule(id_vehicule),
+    FOREIGN KEY (id_chauffeur) REFERENCES personnel(id_personnel),
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire)
+);
+CREATE TABLE IF NOT EXISTS documents (
+    id_document INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER NOT NULL,
+    nom TEXT NOT NULL,
+    type TEXT,
+    url TEXT,
+    taille INTEGER,
+    date_upload TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire)
+);
+CREATE TABLE IF NOT EXISTS dossier_medical (
+    id_dossier INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER UNIQUE NOT NULL,
+    groupe_sanguin TEXT(3),
+    allergies TEXT,
+    antecedents TEXT,
+    traitements_en_cours TEXT,
+    medecin_traitant TEXT,
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    date_mise_a_jour TIMESTAMP,
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire)
+);
+CREATE TABLE IF NOT EXISTS "facture" (
+	"id_facture"	INTEGER,
+	"id_beneficiaire"	INTEGER NOT NULL,
+	"date_emission"	TEXT DEFAULT (date('now')),
+	"montant_ht"	REAL,
+	"tva"	REAL,
+	"montant_ttc"	REAL,
+	"statut"	TEXT DEFAULT 'emise' CHECK("statut" IN ('emise', 'payee', 'impayee')),
+	"mode_paiement"	TEXT,
+	PRIMARY KEY("id_facture" AUTOINCREMENT),
+	FOREIGN KEY("id_beneficiaire") REFERENCES "beneficiaire"("id_beneficiaire")
+);
+CREATE TABLE IF NOT EXISTS fournisseur (
+    id_fournisseur INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL,
+    type TEXT DEFAULT 'medical' CHECK(type IN ('medical', 'alimentaire', 'hotellerie', 'apicole')),
+    contact TEXT,
+    telephone TEXT,
+    email TEXT
+);
+CREATE TABLE IF NOT EXISTS hospitalisation (
+    id_hospit INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER NOT NULL,
+    id_chambre INTEGER,
+    id_medecin INTEGER,
+    id_infirmier INTEGER,
+    date_admission TIMESTAMP NOT NULL,
+    date_sortie TIMESTAMP,
+    motif TEXT,
+    statut TEXT DEFAULT 'en_cours' CHECK(statut IN ('en_cours', 'terminee')),
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire),
+    FOREIGN KEY (id_chambre) REFERENCES chambre(id_chambre),
+    FOREIGN KEY (id_medecin) REFERENCES personnel(id_personnel),
+    FOREIGN KEY (id_infirmier) REFERENCES personnel(id_personnel)
+);
+CREATE TABLE IF NOT EXISTS indicateur_qualite (
+    id_indicateur INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL,
+    valeur REAL,
+    date_mesure TEXT DEFAULT (date('now')),
+    service TEXT
+, tendance TEXT DEFAULT 'stable');
+CREATE TABLE IF NOT EXISTS logs_connexion (
+    id_log INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_utilisateur INTEGER,
+    type_utilisateur TEXT CHECK(type_utilisateur IN ('personnel', 'beneficiaire')),
+    action TEXT NOT NULL,
+    ip TEXT,
+    user_agent TEXT,
+    date_log TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS medicaments (
+    id_medicament INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER NOT NULL,
+    medicament TEXT NOT NULL,
+    posologie TEXT,
+    horaire TEXT,
+    statut TEXT DEFAULT 'a_donner',
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire)
+);
+CREATE TABLE IF NOT EXISTS messages (
+    id_message INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER NOT NULL,
+    id_medecin INTEGER,
+    sujet TEXT NOT NULL,
+    contenu TEXT NOT NULL,
+    date_envoi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    statut TEXT DEFAULT 'non_lu' CHECK(statut IN ('lu', 'non_lu')),
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire),
+    FOREIGN KEY (id_medecin) REFERENCES personnel(id_personnel)
+);
+CREATE TABLE IF NOT EXISTS mouvement_stock (
+    id_mouvement INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_produit INTEGER NOT NULL,
+    type TEXT DEFAULT 'entree' CHECK(type IN ('entree', 'sortie')),
+    quantite INTEGER NOT NULL,
+    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    motif TEXT,
+    FOREIGN KEY (id_produit) REFERENCES produit(id_produit)
+);
+CREATE TABLE IF NOT EXISTS parametre (
+    id_parametre INTEGER PRIMARY KEY AUTOINCREMENT,
+    cle TEXT UNIQUE NOT NULL,
+    valeur TEXT NOT NULL,
+    description TEXT
+);
+CREATE TABLE IF NOT EXISTS personnel (
+    id_personnel INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL,
+    prenom TEXT NOT NULL,
+    poste TEXT,
+    id_service INTEGER,
+    email TEXT,
+    telephone TEXT,
+    date_embauche TEXT, -- format YYYY-MM-DD
+    statut TEXT DEFAULT 'actif' CHECK(statut IN ('actif', 'inactif')),
+    FOREIGN KEY (id_service) REFERENCES service(id_service)
+);
+CREATE TABLE IF NOT EXISTS planning (
+    id_planning INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_personnel INTEGER NOT NULL,
+    date TEXT NOT NULL, -- YYYY-MM-DD
+    heure_debut TEXT NOT NULL, -- HH:MM
+    heure_fin TEXT NOT NULL, -- HH:MM
+    affectation TEXT,
+    FOREIGN KEY (id_personnel) REFERENCES personnel(id_personnel)
+);
+CREATE TABLE IF NOT EXISTS prescription (
+    id_prescription INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER NOT NULL,
+    medicament TEXT NOT NULL,
+    posologie TEXT,
+    date_prescription TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    statut TEXT DEFAULT 'en_cours' CHECK(statut IN ('en_cours', 'termine')),
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire)
+);
+CREATE TABLE IF NOT EXISTS produit (
+    id_produit INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL,
+    type TEXT DEFAULT 'fourniture' CHECK(type IN ('medicament', 'apitherapie', 'alimentaire', 'linge', 'fourniture')),
+    stock_actuel INTEGER DEFAULT 0,
+    seuil_alerte INTEGER DEFAULT 10,
+    id_fournisseur INTEGER,
+    FOREIGN KEY (id_fournisseur) REFERENCES fournisseur(id_fournisseur)
+);
+CREATE TABLE IF NOT EXISTS projets (
+    id_projet INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL,
+    description TEXT,
+    budget REAL,
+    avancement INTEGER DEFAULT 0,
+    statut TEXT DEFAULT 'planifie'
+);
+CREATE TABLE IF NOT EXISTS rapport (
+    id_rapport INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL,
+    periode TEXT,
+    taille TEXT,
+    url TEXT
+);
+CREATE TABLE IF NOT EXISTS rendez_vous (
+    id_rdv INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER NOT NULL,
+    date_rdv TIMESTAMP NOT NULL,
+    motif TEXT,
+    statut TEXT DEFAULT 'planifie', id_medecin INTEGER,
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire)
+);
+CREATE TABLE IF NOT EXISTS service (
+    id_service INTEGER PRIMARY KEY AUTOINCREMENT,
+    nom TEXT NOT NULL,
+    departement TEXT CHECK(departement IN ('medical', 'hotellerie', 'gestion', 'direction')),
+    description TEXT
+);
+CREATE TABLE IF NOT EXISTS soins (
+    id_soin INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER NOT NULL,
+    type_soin TEXT NOT NULL,
+    date_soin TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    statut TEXT DEFAULT 'programme',
+    urgent BOOLEAN DEFAULT 0,
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire)
+);
+CREATE TABLE IF NOT EXISTS specialiste (
+    id_specialiste INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_personnel INTEGER NOT NULL,
+    specialite TEXT NOT NULL,
+    photo_url TEXT,
+    cv_url TEXT,
+    description TEXT,
+    FOREIGN KEY (id_personnel) REFERENCES personnel(id_personnel)
+);
+CREATE TABLE IF NOT EXISTS tokens (
+    id_token INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_utilisateur INTEGER NOT NULL,
+    type_utilisateur TEXT NOT NULL,
+    token TEXT NOT NULL,
+    date_creation TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    date_expiration TIMESTAMP,
+    statut TEXT DEFAULT 'actif' CHECK(statut IN ('actif', 'inactif'))
+);
+CREATE TABLE IF NOT EXISTS vehicule (
+    id_vehicule INTEGER PRIMARY KEY AUTOINCREMENT,
+    immatriculation TEXT NOT NULL UNIQUE,
+    type TEXT DEFAULT 'voiture' CHECK(type IN ('ambulance', 'minibus', 'voiture')),
+    etat TEXT DEFAULT 'disponible' CHECK(etat IN ('disponible', 'en_course', 'maintenance')),
+    kilometrage INTEGER,
+    date_dernier_entretien TEXT -- YYYY-MM-DD
+);
+CREATE TABLE IF NOT EXISTS whatsapp_validation (
+    id_validation INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_beneficiaire INTEGER,
+    telephone TEXT NOT NULL,
+    code TEXT(6) NOT NULL,
+    date_envoi TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    date_validation TIMESTAMP,
+    statut TEXT DEFAULT 'en_attente' CHECK(statut IN ('en_attente', 'valide', 'expire')),
+    tentative INTEGER DEFAULT 0, date_expiration DATETIME,
+    FOREIGN KEY (id_beneficiaire) REFERENCES beneficiaire(id_beneficiaire)
+);
+INSERT INTO "admissions" ("id_admission","id_beneficiaire","date_admission","service","medecin","statut") VALUES (1,1,'2026-03-13 17:37:31','Cardiologie','Dr. Diallo','en_cours'),
+ (2,2,'2026-03-13 17:37:31','Urgences','Dr. Fall','termine'),
+ (3,3,'2026-03-13 17:37:31','Chirurgie','Dr. Ba','en_attente'),
+ (4,3,'2026-03-16 15:55:43','chirrurgie','1','en_cours'),
+ (5,7,'2026-03-30 19:16:06','chirrurgie','2','en_cours');
+INSERT INTO "beneficiaire" ("id_beneficiaire","nom","prenom","date_naissance","email","telephone","whatsapp","adresse","type","date_inscription","statut") VALUES (1,'DERBEL','Hamidou','1975-12-08','boumed2000@gmail.com','771234567','771234567','tlemcen','patient','2026-03-08 16:40:05','actif'),
+ (2,'FILLALI','Amina','2001-09-02','boumed2000@gmail.com','781234567','781234567','bejaia','touriste','2026-03-08 16:40:05','actif'),
+ (3,'SOWWALI','Oumar','1995-06-21','boumed2000@gmail.com','761234567','761234567','temenraset','mixte','2026-03-08 16:40:05','actif'),
+ (4,'BOUMESJED ','Mohamed','1978-05-27','boumed2000@gmail.com','+221771234567','+221771234567','algerie - SBA',NULL,'2026-03-10 16:35:29','actif'),
+ (5,'makhloufi','zaki','2002-06-30','boumed2000@gmail.com','21377777777','21377777777','alger','patient','2026-03-16 14:48:39','actif'),
+ (6,'mansour','houari','1988-10-08','mansourhouari@gmail.com','3399902100','3399902100','oran','patient','2026-03-16 15:33:37','actif'),
+ (7,'sarnou','yacine','1982-06-29','boumed2000@gmail.com','+213666666666','+213666666666','oran','patient','2026-03-30 18:22:28','actif'),
+ (8,'benchaa','mustapha','1976-05-27','boumed2000@gmail.com','+2215555555','+2215555555','adrar algerie','patient','2026-03-30 18:48:36','actif'),
+ (9,'benchaa','mustapha','1962-07-05','boumed2000@gmail.com','+2215555555','+2215555555','adrar algerie','patient','2026-03-30 18:51:35','actif'),
+ (10,'hadjjari','abd el krim','1972-04-08','boumed2000@gmail.com','21388888888','21388888888','oran','patient','2026-03-30 19:17:19','actif'),
+ (11,'saim','Mohamed','1979-12-27','boumed2000@gmail.com','91122222','91122222','tizi ouzou algerie','patient','2026-04-18 20:30:06','actif'),
+ (12,'bendelhoum','mohamed','1954-11-01','boumed2000@gmail.com','20080808080','20080808080','adrar','patient','2026-05-01 17:32:28','actif'),
+ (13,'aoumer','mahdi','1962-07-05','boumed2000@gmail.com','21310101010','21310101010','mascara','patient','2026-05-05 08:55:35','actif'),
+ (14,'BOUDOUMA','Saleh','2000-08-25','boudoumasaleh@gmail.com','+21360606060',NULL,'maraval-oran','patient','2026-05-07 20:13:11','actif');
+INSERT INTO "chambre" ("id_chambre","numero","type","equipements","capacite","statut") VALUES (1,'101','standard',NULL,2,'libre'),
+ (2,'102','standard',NULL,2,'libre'),
+ (3,'201','medicalisee',NULL,1,'libre'),
+ (4,'202','medicalisee',NULL,1,'libre'),
+ (5,'301','suite',NULL,2,'libre'),
+ (6,'103','medicalisee',NULL,1,'occupee'),
+ (7,'104','standard',NULL,1,'libre'),
+ (8,'110','standard',NULL,2,'libre');
+INSERT INTO "commande_restauration" ("id_commande","id_beneficiaire","date_heure","type_service","regime","instructions","statut") VALUES (1,1,'2026-03-08 16:40:05','hospitalisation','Sans sel',NULL,'en_cuisine'),
+ (2,2,'2026-03-08 16:40:05','salle',NULL,NULL,'pret'),
+ (3,1,'2026-03-14 17:35:02','hospitalisation',NULL,NULL,'en_cuisine'),
+ (4,2,'2026-03-14 17:35:02','salle',NULL,NULL,'pret'),
+ (5,4,'2026-03-16 17:02:20','hospitalisation','sans sel','pas tres chaud pas tres froid','en_cuisine');
+INSERT INTO "constantes" ("id_constante","id_beneficiaire","date_prise","tension","pouls","temperature","saturation","chambre") VALUES (1,1,'2026-03-13 17:00:44','140/90',88,38.5,96,'305'),
+ (2,2,'2026-03-13 17:00:44','120/75',72,37.2,98,'210'),
+ (3,3,'2026-03-13 17:00:44','135/85',76,36.8,97,'412'),
+ (4,4,'2026-03-16 16:18:52','120/80',145,38.0,25,NULL);
+INSERT INTO "consultation" ("id_consultation","id_beneficiaire","id_medecin","date_heure","type","motif","compte_rendu","statut") VALUES (1,1,1,'2025-04-15 09:00:00','presentiel','Douleurs lombaires',NULL,'planifiee'),
+ (2,2,2,'2025-04-16 10:30:00','teleconsultation','Conseils voyage',NULL,'planifiee'),
+ (3,3,1,'2026-03-27T16:39','presentiel','controle',NULL,'planifiee'),
+ (4,1,1,'2026-04-29 19:17:38','presentiel','Douleurs thoraciques',NULL,'realisee'),
+ (5,2,1,'2026-04-30 19:17:38','teleconsultation','Suivi tension',NULL,'realisee'),
+ (6,3,1,'2026-05-02 19:17:38','presentiel','Contrôle annuel',NULL,'planifiee'),
+ (7,10,1,'2026-05-31T03:00:00','presentiel','controle',NULL,'planifiee'),
+ (8,1,1,'2026-05-28T10:00:00','teleconsultation','Orient',NULL,'planifiee');
+INSERT INTO "course" ("id_course","id_vehicule","id_chauffeur","id_beneficiaire","date_depart","lieu_depart","destination","type","statut") VALUES (1,1,1,1,'2026-03-14 09:30:00','Hôpital','Radiologie','sanitaire','terminee'),
+ (2,2,2,2,'2026-03-14 10:15:00','Ch. 305','Bloc','sanitaire','en_cours'),
+ (3,3,3,3,'2026-03-14 11:00:00','Urgences','Cardio','sanitaire','planifiee'),
+ (4,2,2,4,'2026-03-18T00:00','hhh','alger','sanitaire','planifiee'),
+ (5,1,3,1,'2026-05-03 20:27:43','CHAT','Domicile patient','sanitaire','planifiee'),
+ (6,1,3,1,'2026-05-03 20:39:10','CHAT','Domicile patient','sanitaire','planifiee'),
+ (7,1,7,2,'2026-05-03 21:39:10','Domicile patient A','CHAT','sanitaire','planifiee');
+INSERT INTO "documents" ("id_document","id_beneficiaire","nom","type","url","taille","date_upload") VALUES (1,1,'Compte-rendu_consultation_15-03-26.pdf','application/pdf',NULL,250880,'2026-04-14 18:18:50'),
+ (2,1,'Radio_thorax_28-02-26.jpg','image/jpeg',NULL,1258291,'2026-04-09 18:18:50'),
+ (3,1,'Prescription_Amoxicilline_15-03-26.pdf','application/pdf',NULL,126976,'2026-04-14 18:18:50');
+INSERT INTO "dossier_medical" ("id_dossier","id_beneficiaire","groupe_sanguin","allergies","antecedents","traitements_en_cours","medecin_traitant","date_creation","date_mise_a_jour") VALUES (1,1,'A+','Pénicilline','Hypertension','Amlodipine 5mg','Dr. Diallo','2026-03-13 18:00:25',NULL),
+ (2,2,'O-','Aucune','Asthme','Ventoline','Dr. Fall','2026-03-13 18:00:25',NULL),
+ (3,3,'B+','Arachides','Diabète type 2','Metformine','Dr. Diallo','2026-03-13 18:00:25',NULL);
+INSERT INTO "facture" ("id_facture","id_beneficiaire","date_emission","montant_ht","tva","montant_ttc","statut","mode_paiement") VALUES (1,1,'2026-03-01',NULL,NULL,49500.0,'impayee',NULL),
+ (2,2,'2026-03-05',NULL,NULL,27500.0,'emise',NULL),
+ (3,3,'2026-03-08',NULL,NULL,137500.0,'impayee',NULL);
+INSERT INTO "fournisseur" ("id_fournisseur","nom","type","contact","telephone","email") VALUES (1,'Pharmacie Centrale','medical','M. Diallo',NULL,NULL),
+ (2,'Apiculteurs du Sahel','apicole','Mme Diarra',NULL,NULL);
+INSERT INTO "hospitalisation" ("id_hospit","id_beneficiaire","id_chambre","id_medecin","id_infirmier","date_admission","date_sortie","motif","statut") VALUES (1,1,3,1,NULL,'2025-04-10 14:30:00',NULL,'Observation post-opératoire','en_cours');
+INSERT INTO "indicateur_qualite" ("id_indicateur","nom","valeur","date_mesure","service","tendance") VALUES (1,'Satisfaction patient',4.5,'2026-03-08','Hospitalisation','stable'),
+ (2,'Satisfaction patient',3.2,'2026-03-08','Restauration','stable'),
+ (3,'Satisfaction patient',4.8,'2026-03-08','Accueil','stable'),
+ (4,'Temps attente',2.1,'2026-03-08','Consultations','stable'),
+ (5,'Temps attente',4.0,'2026-03-08','Urgences','stable'),
+ (6,'Satisfaction patients','92%','2026-03-14',NULL,'stable'),
+ (7,'Respect des protocoles','98%','2026-03-14',NULL,'stable'),
+ (8,'Délai d''attente moyen','15 min','2026-03-14',NULL,'stable'),
+ (9,'Taux d''infection','1.2%','2026-03-14',NULL,'stable');
+INSERT INTO "medicaments" ("id_medicament","id_beneficiaire","medicament","posologie","horaire","statut") VALUES (1,1,'Amoxicilline 500mg','1 comprimé 3x/jour','08:00','a_donner'),
+ (2,2,'Paracétamol 1000mg','1 comprimé si douleur','10:00','donne'),
+ (3,3,'Héparine','Injection','12:00','a_donner'),
+ (4,1,'Amoxicilline 500mg','1 comprimé 3x/jour','08:00','a_donner'),
+ (5,2,'Paracétamol 1000mg','1 comprimé si douleur','10:00','donne'),
+ (6,3,'Héparine','Injection','12:00','a_donner'),
+ (7,4,'sulpirid','un comprimé','18:00','a_donner');
+INSERT INTO "messages" ("id_message","id_beneficiaire","id_medecin","sujet","contenu","date_envoi","statut") VALUES (1,1,1,'Résultats d''analyse','Vos résultats d''analyse sont disponibles. Veuillez consulter votre dossier.','2026-04-17 17:38:55','non_lu'),
+ (2,1,1,'Rappel rendez-vous','Rappel : votre rendez-vous est prévu le 25/03/2026 à 09h30.','2026-04-16 17:38:55','lu'),
+ (3,1,NULL,'Facture disponible','Votre facture du mois de mars est disponible dans votre espace.','2026-04-15 17:38:55','lu');
+INSERT INTO "parametre" ("id_parametre","cle","valeur","description") VALUES (1,'nom_etablissement','Clinique hoteliaire et actions touristiques (CHAT)','Nom officiel'),
+ (2,'adresse','UDL SBA, ALGERIE','Adresse complète'),
+ (3,'telephone','+213 773 460 284','Téléphone standard'),
+ (4,'langue','Arabe,Anglais,Français','Langue par défaut'),
+ (5,'fuseau_horaire','GMT+1','Fuseau horaire');
+INSERT INTO "personnel" ("id_personnel","nom","prenom","poste","id_service","email","telephone","date_embauche","statut") VALUES (1,'Faye','Amadou','medecin',2,'a.faye@hopital.com','2222222222','2020-01-15','actif'),
+ (2,'Ndiaye','Awa','medecin',2,'a.ndiaye@hopital.com','3333333333','2019-03-10','actif'),
+ (3,'Diaf','Ibrahim','infirmier',3,'i.diouf@hopital.com','4444444444','2021-06-01','actif'),
+ (4,'Seck','Fatou','Apithérapeute',4,'f.seck@hopital.com','1111111111','2022-09-20','actif'),
+ (5,'benchaa','mustapha','medecin',2,'boumed2000@gmail.com','55555555','2026-03-16','actif'),
+ (6,'Diallo','Imad','medecin',NULL,'dr.diallo@chat.com','771234444','2020-01-15','actif'),
+ (7,'Ndiaye','Pape','chauffeur',NULL,'nadipap@chat.com','771234569',NULL,'actif'),
+ (8,'Fall','Aminata','direction',NULL,NULL,'771234570',NULL,'actif'),
+ (99,'BOUMESJED','Mohamed','boss',NULL,NULL,'771234571',NULL,'actif');
+INSERT INTO "planning" ("id_planning","id_personnel","date","heure_debut","heure_fin","affectation") VALUES (1,1,'2026-03-16','08:00','16:00','Soins intensifs'),
+ (2,2,'2026-03-16','14:00','22:00','Urgences');
+INSERT INTO "prescription" ("id_prescription","id_beneficiaire","medicament","posologie","date_prescription","statut") VALUES (1,1,'Amoxicilline 500mg','1 comprimé 3x/jour','2026-03-13 16:40:07','en_cours'),
+ (2,2,'Paracétamol 1000mg','1 comprimé si douleur','2026-03-13 16:40:07','termine'),
+ (3,3,'Metformine 500mg','2 comprimés/jour','2026-03-13 16:40:07','en_cours'),
+ (4,1,'solimédrole +nifluril','comprimé matin et soir..posologie tout les jours','2026-03-16 16:01:08','en_cours'),
+ (5,4,'maxilaze + madecassol','une cuillere +2applications','2026-03-16 16:06:16','en_cours'),
+ (6,3,'madecassol','3 application /jour','2026-05-02 19:32:04','en_cours');
+INSERT INTO "produit" ("id_produit","nom","type","stock_actuel","seuil_alerte","id_fournisseur") VALUES (1,'Paracétamol','medicament',150,50,1),
+ (2,'Miel bio','apitherapie',20,10,2),
+ (3,'Draps blancs','linge',200,50,NULL),
+ (4,'Paracétamol 500mg','medicament',45,100,NULL),
+ (5,'Gants stériles M','fourniture',1250,500,NULL),
+ (6,'Bétadine','medicament',12,30,NULL),
+ (7,'Seringues 5ml','fourniture',850,300,NULL);
+INSERT INTO "projets" ("id_projet","nom","description","budget","avancement","statut") VALUES (1,'Nouveau bloc opératoire','Extension avec 3 salles',250000000.0,74,'en_cours'),
+ (2,'Application mobile patients','Prise de RDV et suivi',15000000.0,63,'en_cours'),
+ (3,'Rénovation urgences','Modernisation du service',85000000.0,0,'planifie'),
+ (4,'extension de la salle chirurgicale','profiter de l''espace après le bloc opératoire',1400000.0,0,'planifie');
+INSERT INTO "rapport" ("id_rapport","nom","periode","taille","url") VALUES (1,'Activité médicale','Mars 2026','2.4 Mo','/rapports/activite.pdf'),
+ (2,'Rapport financier','Mars 2026','1.8 Mo','/rapports/financier.pdf'),
+ (3,'Indicateurs qualité','Mars 2026','0.5 Mo','/rapports/qualite.pdf'),
+ (4,'Présences personnel','Mars 2026','0.9 Mo','/rapports/personnel.pdf'),
+ (5,'Activité médicale','Mars 2026','2.4 Mo','/rapports/activite.pdf'),
+ (6,'Rapport financier','Mars 2026','1.8 Mo','/rapports/financier.pdf'),
+ (7,'Indicateurs qualité','Mars 2026','0.5 Mo','/rapports/qualite.pdf'),
+ (8,'Présences personnel','Mars 2026','0.9 Mo','/rapports/personnel.pdf'),
+ (9,'boumesjed','16/03/2026','88,0 Ko (90 112 octets)','D:\philipshd9\iso');
+INSERT INTO "rendez_vous" ("id_rdv","id_beneficiaire","date_rdv","motif","statut","id_medecin") VALUES (1,1,'2026-03-15 09:30:00','Consultation cardiologie','confirmé',NULL),
+ (2,2,'2026-03-16 10:15:00','Suivi pédiatrie','en attente',NULL),
+ (3,3,'2026-03-17 11:00:00','Contrôle chirurgical','confirmé',NULL),
+ (4,1,'2026-03-15 09:30:00','Consultation cardiologie','confirmé',NULL),
+ (5,2,'2026-03-16 10:15:00','Suivi pédiatrie','en attente',NULL),
+ (6,3,'2026-03-17 11:00:00','Contrôle chirurgical','confirmé',NULL),
+ (7,1,'2026-03-29T15:51','douleurs','planifie',1),
+ (8,1,'2026-04-11T16:02','echographi','planifie',5),
+ (9,1,'2026-05-30T17:23','controle','planifie',5),
+ (10,4,'2026-10-30T21:13','controle+intervention','planifie',5),
+ (11,1,'2026-05-29T01:00:00','controle','planifie',5),
+ (12,1,'2026-05-03 19:17:55','Consultation de contrôle','planifie',1),
+ (13,13,'2026-06-18T11:00:00','bilan anuel','planifie',5);
+INSERT INTO "service" ("id_service","nom","departement","description") VALUES (1,'Hospitalisation','medical',NULL),
+ (2,'Consultations','medical',NULL),
+ (3,'Rééducation','medical',NULL),
+ (4,'Apithérapie','medical',NULL),
+ (5,'Réception Hôtel','hotellerie',NULL),
+ (6,'Étages','hotellerie',NULL),
+ (7,'Restauration','hotellerie',NULL),
+ (8,'Agence Voyages','hotellerie',NULL),
+ (9,'RH','gestion',NULL),
+ (10,'Comptabilité','gestion',NULL),
+ (11,'Moyens Généraux','gestion',NULL),
+ (12,'Informatique','gestion',NULL),
+ (13,'Direction','direction',NULL);
+INSERT INTO "soins" ("id_soin","id_beneficiaire","type_soin","date_soin","statut","urgent") VALUES (1,1,'Pansement','2026-03-13 17:10:16','programme',1),
+ (2,2,'Injection insuline','2026-03-13 17:10:16','programme',0),
+ (3,3,'Rééducation','2026-03-13 17:10:16','programme',0),
+ (4,4,'pansement','2026-03-16 16:21:56','programme',1);
+INSERT INTO "specialiste" ("id_specialiste","id_personnel","specialite","photo_url","cv_url","description") VALUES (1,1,'Cardiologue','/images/cardiologue.jpg','/cvs/dr_faye.pdf','Spécialiste en cardiologie interventionnelle, 15 ans d''expérience.'),
+ (2,2,'Pédiatre','/images/pediatre.jpg','/cvs/dr_ndiaye.pdf','Pédiatre depuis 10 ans, passionné par la santé des enfants.'),
+ (3,3,'Chirurgien','/images/chirurgien.jpg','/cvs/dr_diouf.pdf','Chirurgien généraliste, spécialisé en laparoscopie.'),
+ (4,5,'urologue','/images/urologue.jpg','/cvs/dr_diouf.pdf','Spécialiste en urologie interventionnelle');
+INSERT INTO "vehicule" ("id_vehicule","immatriculation","type","etat","kilometrage","date_dernier_entretien") VALUES (1,'AMB-001','ambulance','disponible',NULL,NULL),
+ (2,'MB-002','minibus','disponible',NULL,NULL),
+ (3,'AB-123-CD','ambulance','disponible',NULL,NULL),
+ (4,'EF-456-GH','ambulance','en_course',NULL,NULL),
+ (5,'IJ-789-KL','voiture','disponible',NULL,NULL),
+ (6,'MN-012-OP','minibus','maintenance',NULL,NULL);
+INSERT INTO "whatsapp_validation" ("id_validation","id_beneficiaire","telephone","code","date_envoi","date_validation","statut","tentative","date_expiration") VALUES (3,NULL,'21377777777','371210','2026-04-18 20:08:36','2026-04-18 20:08:50','valide',0,'2026-04-18T20:10:36.730Z'),
+ (4,NULL,'23333333333','968365','2026-04-18 20:11:24','2026-04-18 20:11:37','valide',0,'2026-04-18T20:13:24.262Z'),
+ (5,NULL,'21099999999','678394','2026-04-18 20:20:06','2026-04-18 20:20:16','valide',0,'2026-04-18T20:22:06.720Z'),
+ (6,NULL,'910222222','724921','2026-04-18 20:23:31','2026-04-18 20:23:45','valide',0,'2026-04-18T20:25:31.080Z'),
+ (7,NULL,'91122222','791769','2026-04-18 20:29:19','2026-04-18 20:29:28','valide',0,'2026-04-18T20:31:19.047Z'),
+ (8,NULL,'213773460284','609790','2026-04-19 15:55:26','2026-04-19 15:55:34','valide',0,'2026-04-19T15:57:26.818Z'),
+ (9,NULL,'221771234567','662822','2026-04-19 15:56:27','2026-04-19 15:56:44','valide',0,'2026-04-19T15:58:27.749Z'),
+ (29,NULL,'20080808080','970351','2026-05-01 17:30:53','2026-05-01 17:31:20','valide',0,'2026-05-01T17:32:53.281Z'),
+ (35,NULL,'55555555','835838','2026-05-01 18:35:19','2026-05-01 18:35:27','valide',0,'2026-05-01T18:37:19.263Z'),
+ (40,NULL,'771234444','194174','2026-05-02 19:11:01','2026-05-02 19:11:08','valide',0,'2026-05-02T19:13:01.177Z'),
+ (65,NULL,'21310101010','774036','2026-05-05 17:45:08','2026-05-05 17:45:16','valide',0,'2026-05-05T17:47:08.148Z'),
+ (73,NULL,'+221771234567','215430','2026-05-07 20:07:49','2026-05-07 20:07:59','valide',0,'2026-05-07T20:09:49.074Z'),
+ (77,NULL,'+21360606060','760246','2026-05-07 20:17:20','2026-05-07 20:17:31','valide',0,'2026-05-07T20:19:19.808Z'),
+ (85,NULL,'1111111111','385489','2026-05-08 19:55:48','2026-05-08 19:55:56','valide',0,'2026-05-08T19:57:48.858Z'),
+ (90,NULL,'21370707070','430034','2026-05-08 20:01:08','2026-05-08 20:01:17','valide',0,'2026-05-08T20:03:08.590Z'),
+ (92,NULL,'771234567','961285','2026-05-08 20:04:05','2026-05-08 20:04:13','valide',0,'2026-05-08T20:06:05.168Z'),
+ (94,NULL,'2222222222','757060','2026-05-08 20:06:06','2026-05-08 20:06:13','valide',0,'2026-05-08T20:08:06.355Z'),
+ (96,NULL,'4444444444','831176','2026-05-08 20:08:10','2026-05-08 20:08:17','valide',0,'2026-05-08T20:10:09.990Z'),
+ (99,NULL,'771234569','276843','2026-05-08 20:10:11','2026-05-08 20:10:19','valide',0,'2026-05-08T20:12:11.473Z'),
+ (101,NULL,'771234570','505435','2026-05-08 20:11:09','2026-05-08 20:11:23','valide',0,'2026-05-08T20:13:09.308Z'),
+ (102,NULL,'771234571','218649','2026-05-08 20:11:47','2026-05-08 20:11:58','valide',0,'2026-05-08T20:13:47.235Z');
+COMMIT;
