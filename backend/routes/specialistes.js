@@ -32,4 +32,16 @@ app.get('/api/specialistes', (req, res) => {
         }
     });
 });
+// ROUTE CORRECTE : utiliser router au lieu de app
+router.get('/', (req, res) => {
+    const sql = 'SELECT * FROM specialistes ORDER BY nom';
+    
+    db.query(sql, (err, results) => {
+        if (err) {
+            console.error('Erreur chargement spécialistes:', err);
+            return res.status(500).json({ error: 'Erreur serveur' });
+        }
+        res.json(results);
+    });
+});
 module.exports = router;
