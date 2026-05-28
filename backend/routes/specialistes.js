@@ -16,7 +16,7 @@ router.get('/', (req, res) => {
         }
     });
 });
-app.get('/api/specialistes', (req, res) => {
+router.get('/api/specialistes', (req, res) => {
     const query = `
         SELECT s.id_specialiste, s.id_personnel, p.nom, p.prenom, 
                s.specialite, s.photo_url, p.telephone, p.email, 
