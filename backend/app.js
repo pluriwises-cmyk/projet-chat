@@ -6,6 +6,8 @@ const db = require('./database/db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const authRoutes = require('./routes/auth');
+
 
 // Middlewares
 app.use(cors());
@@ -47,7 +49,7 @@ app.use('/api/documents', require('./routes/documents'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/soins', require('./routes/soins'));
 app.use('/api/constantes', require('./routes/constantes'));
-
+app.use('/api/auth', authRoutes);
 
 // ==================== TEST ====================
 app.get('/api/test', (req, res) => {
