@@ -3,7 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 //const bcrypt = require('bcrypt');
 const db = require('../database/db');
-
+console.log('✅ Route auth.js chargée avec succès');
 const SECRET_KEY = process.env.JWT_SECRET || 'votre_secret_tres_long_et_securise_ici';
 
 // Route de connexion
