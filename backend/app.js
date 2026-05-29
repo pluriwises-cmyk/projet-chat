@@ -1,22 +1,3 @@
-// backend/app.js
-// backend/app.js
-const express = require('express');
-const cors = require('cors');
-const path = require('path');
-const db = require('./database/db');
-
-const app = express();
-const PORT = process.env.PORT || 3000;
-const authRoutes = require('./routes/auth');
-
-// Middlewares
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// Dossier statique (frontend)
-app.use(express.static(path.join(__dirname, '../frontend')));
-console.log('📁 Dossier frontend servi:', path.join(__dirname, '../frontend'));
 
 // backend/app.js
 const express = require('express');
