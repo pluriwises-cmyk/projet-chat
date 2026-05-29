@@ -104,4 +104,48 @@ router.get('/setup', (req, res) => {
         });
     });
 });
+// ROUTE TEMPORAIRE POUR AJOUTER TOUS LES UTILISATEURS
+router.get('/seed', (req, res) => {
+    const users = [
+        // Médecins
+        { nom: 'Dupont', prenom: 'Jean', poste: 'medecin', email: 'jean.dupont@chat.com', telephone: '0612345601', mot_de_passe: 'password123', statut: 'actif' },
+        { nom: 'Martin', prenom: 'Sophie', poste: 'medecin', email: 'sophie.martin@chat.com', telephone: '0612345602', mot_de_passe: 'password123', statut: 'actif' },
+        // Infirmiers
+        { nom: 'Benammar', prenom: 'Khaled', poste: 'infirmier', email: 'khaled.benammar@chat.com', telephone: '0612345610', mot_de_passe: 'password123', statut: 'actif' },
+        { nom: 'Zahra', prenom: 'Fatima', poste: 'infirmier', email: 'fatima.zahra@chat.com', telephone: '0612345611', mot_de_passe: 'password123', statut: 'actif' },
+        // Administratif (déjà existant)
+        { nom: 'Admin', prenom: 'Principal', poste: 'administratif', email: 'admin@chat.com', telephone: '0612345620', mot_de_passe: 'admin123', statut: 'actif' },
+        // Hôtellerie
+        { nom: 'Touré', prenom: 'Ali', poste: 'hotellerie', email: 'ali.toure@chat.com', telephone: '0612345630', mot_de_passe: 'password123', statut: 'actif' },
+        // Logistique
+        { nom: 'Diop', prenom: 'Moussa', poste: 'logistique', email: 'moussa.diop@chat.com', telephone: '0612345640', mot_de_passe: 'password123', statut: 'actif' },
+        // Qualité
+        { nom: 'Diallo', prenom: 'Aïcha', poste: 'qualite', email: 'aicha.diallo@chat.com', telephone: '0612345650', mot_de_passe: 'password123', statut: 'actif' },
+        // Voyages
+        { nom: 'Sow', prenom: 'Ousmane', poste: 'voyages', email: 'ousmane.sow@chat.com', telephone: '0612345660', mot_de_passe: 'password123', statut: 'actif' }
+    ];
+
+    let completed = 0;
+    let errors = [];
+
+    users.forEach(user => {
+        const sql = `INSERT OR REPLACE INTO personnel (nom, prenom, poste, email, telephone, mot_de_passe, statut) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?)`;
+        
+        db.run(sql, [user.nom, user.prenom, user.poste, user.email, user.telephone, user.mot_de_passe, user.statut], (err) => {
+            if (err) {
+                errors.push({ email: user.email, error: err.message });
+            }
+            completed++;
+            
+            if (completed === users.length) {
+                if (errors.length > 0) {
+                    res.status(500).json({ message: '⚠️ Certains utilisateurs n\'ont pas été ajoutés', errors });
+                } else {
+                    res.json({ message: '✅ Tous les utilisateurs ont été ajoutés avec succès', users: users.map(u => ({ email: u.email, role: u.poste })) });
+                }
+            }
+        });
+    });
+});
 module.exports = router;
