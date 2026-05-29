@@ -24,12 +24,16 @@
             <h2 class="mb-4">Ajouter une consultation</h2>
             <form id="consultationForm">
                 <div class="mb-3">
-                    <label>ID du patient</label>
-                    <input type="number" class="form-control" id="id_beneficiaire" required>
+                    <label>Patient</label>
+                    <select class="form-control" id="id_beneficiaire" required>
+                        <option value="">Chargement des patients...</option>
+                    </select>
                 </div>
                 <div class="mb-3">
-                    <label>ID du médecin</label>
-                    <input type="number" class="form-control" id="id_medecin" required>
+                    <label>Médecin</label>
+                    <select class="form-control" id="id_medecin" required>
+                        <option value="">Chargement des médecins...</option>
+                    </select>
                 </div>
                 <div class="mb-3">
                     <label>Date et heure</label>
@@ -61,8 +65,44 @@
     </div>
 
     <script>
+        // Charger la liste des patients (bénéficiaires)
+        async function chargerPatients() {
+            try {
+                const patients = await API.get('/beneficiaires');
+                const select = document.getElementById('id_beneficiaire');
+                select.innerHTML = '<option value="">Sélectionner un patient</option>';
+                patients.forEach(p => {
+                    select.innerHTML += `<option value="${p.id_beneficiaire}">${p.nom} ${p.prenom} (ID: ${p.id_beneficiaire})</option>`;
+                });
+            } catch (e) {
+                console.error('Erreur chargement patients:', e);
+                document.getElementById('id_beneficiaire').innerHTML = '<option value="">Erreur chargement</option>';
+            }
+        }
+
+        // Charger la liste des médecins (personnel avec poste = medecin)
+        async function chargerMedecins() {
+            try {
+                const medecins = await API.get('/personnel/medecins');
+                const select = document.getElementById('id_medecin');
+                select.innerHTML = '<option value="">Sélectionner un médecin</option>';
+                medecins.forEach(m => {
+                    select.innerHTML += `<option value="${m.id_personnel}">Dr. ${m.nom} ${m.prenom}</option>`;
+                });
+            } catch (e) {
+                console.error('Erreur chargement médecins:', e);
+                document.getElementById('id_medecin').innerHTML = '<option value="">Erreur chargement</option>';
+            }
+        }
+
+        // Charger les données au chargement de la page
+        chargerPatients();
+        chargerMedecins();
+
+        // Gestion de l'envoi du formulaire
         document.getElementById('consultationForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
             const data = {
                 id_beneficiaire: document.getElementById('id_beneficiaire').value,
                 id_medecin: document.getElementById('id_medecin').value,
@@ -71,15 +111,27 @@
                 type: document.getElementById('type').value,
                 statut: document.getElementById('statut').value
             };
+
+            // Validation simple
+            if (!data.id_beneficiaire || !data.id_medecin || !data.date_heure) {
+                document.getElementById('message').innerHTML = '<div class="alert alert-warning">Veuillez remplir tous les champs obligatoires</div>';
+                return;
+            }
+
             try {
                 const result = await API.post('/consultations', data);
                 document.getElementById('message').innerHTML = `<div class="alert alert-success">Consultation ajoutée (ID ${result.id})</div>`;
                 document.getElementById('consultationForm').reset();
+                // Recharger les listes pour remettre à jour
+                chargerPatients();
+                chargerMedecins();
             } catch (e) {
-                document.getElementById('message').innerHTML = '<div class="alert alert-danger">Erreur lors de l\'ajout</div>';
+                console.error('Erreur:', e);
+                document.getElementById('message').innerHTML = '<div class="alert alert-danger">Erreur lors de l\'ajout de la consultation</div>';
             }
         });
     </script>
 </body>
 
+</html>
 </html>
