@@ -82,18 +82,28 @@
 
         // Charger la liste des médecins (personnel avec poste = medecin)
         async function chargerMedecins() {
-            try {
-                const medecins = await API.get('/personnel/medecin');
-                const select = document.getElementById('id_medecin');
-                select.innerHTML = '<option value="">Sélectionner un médecin</option>';
-                medecins.forEach(m => {
-                    select.innerHTML += `<option value="${m.id_personnel}">Dr. ${m.nom} ${m.prenom}</option>`;
-                });
-            } catch (e) {
-                console.error('Erreur chargement médecins:', e);
-                document.getElementById('id_medecin').innerHTML = '<option value="">Erreur chargement</option>';
-            }
+    try {
+        // Récupérer tout le personnel
+        const toutLePersonnel = await API.get('/personnel');
+        
+        // Filtrer pour garder seulement les médecins
+        const medecins = toutLePersonnel.filter(p => p.poste === 'medecin');
+        
+        const select = document.getElementById('id_medecin');
+        select.innerHTML = '<option value="">Sélectionner un médecin</option>';
+        
+        if (medecins.length === 0) {
+            select.innerHTML = '<option value="">Aucun médecin trouvé</option>';
+        } else {
+            medecins.forEach(m => {
+                select.innerHTML += `<option value="${m.id_personnel}">Dr. ${m.nom} ${m.prenom}</option>`;
+            });
         }
+    } catch (e) {
+        console.error('Erreur chargement médecins:', e);
+        document.getElementById('id_medecin').innerHTML = '<option value="">Erreur chargement</option>';
+    }
+}
 
         // Charger les données au chargement de la page
         chargerPatients();
