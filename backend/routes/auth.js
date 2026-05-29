@@ -86,5 +86,22 @@ router.post('/login', async (req, res) => {
         });
     });
 });
-
+// ROUTE TEMPORAIRE POUR AJOUTER LA COLONNE mot_de_passe
+router.get('/setup', (req, res) => {
+    const sql = `ALTER TABLE personnel ADD COLUMN mot_de_passe TEXT;`;
+    db.run(sql, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+            return res.status(500).json({ error: err.message });
+        }
+        // Ajouter l'utilisateur admin
+        const insertSql = `INSERT OR REPLACE INTO personnel (id_personnel, nom, prenom, poste, email, telephone, mot_de_passe, statut) 
+                           VALUES (1, 'Admin', 'Principal', 'administratif', 'admin@chat.com', '0612345620', 'admin123', 'actif')`;
+        db.run(insertSql, (err2) => {
+            if (err2) {
+                return res.status(500).json({ error: err2.message });
+            }
+            res.json({ message: '✅ Base de données initialisée avec succès' });
+        });
+    });
+});
 module.exports = router;
