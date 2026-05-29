@@ -33,15 +33,15 @@ const initDatabase = () => {
 
     // 2. Liste des utilisateurs par défaut
     const users = [
-        ['Dupont', 'Jean', 'medecin', 'jean.dupont@chat.com', '0612345601', 'password123', 'actif'],
-        ['Martin', 'Sophie', 'medecin', 'sophie.martin@chat.com', '0612345602', 'password123', 'actif'],
+        ['Dellal', 'Jamal', 'medecin', 'jean.dupont@chat.com', '0612345601', 'password123', 'actif'],
+        ['Mansouri', 'Soumia', 'medecin', 'sophie.martin@chat.com', '0612345602', 'password123', 'actif'],
         ['Benammar', 'Khaled', 'infirmier', 'khaled.benammar@chat.com', '0612345610', 'password123', 'actif'],
         ['Zahra', 'Fatima', 'infirmier', 'fatima.zahra@chat.com', '0612345611', 'password123', 'actif'],
         ['Admin', 'Principal', 'administratif', 'admin@chat.com', '0612345620', 'admin123', 'actif'],
-        ['Touré', 'Ali', 'hotellerie', 'ali.toure@chat.com', '0612345630', 'password123', 'actif'],
-        ['Diop', 'Moussa', 'logistique', 'moussa.diop@chat.com', '0612345640', 'password123', 'actif'],
+        ['Touril', 'Ali', 'hotellerie', 'ali.toure@chat.com', '0612345630', 'password123', 'actif'],
+        ['Dilawi', 'Moussa', 'logistique', 'moussa.diop@chat.com', '0612345640', 'password123', 'actif'],
         ['Diallo', 'Aïcha', 'qualite', 'aicha.diallo@chat.com', '0612345650', 'password123', 'actif'],
-        ['Sow', 'Ousmane', 'voyages', 'ousmane.sow@chat.com', '0612345660', 'password123', 'actif']
+        ['Sowwane', 'Ousmane', 'voyages', 'ousmane.sow@chat.com', '0612345660', 'password123', 'actif']
     ];
 
     // 3. Insérer ou ignorer les utilisateurs
