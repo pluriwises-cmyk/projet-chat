@@ -127,21 +127,21 @@ router.get('/setup', (req, res) => {
 router.get('/seed', (req, res) => {
     const users = [
         // Médecins
-        { nom: 'Dupont', prenom: 'Jean', poste: 'medecin', email: 'jean.dupont@chat.com', telephone: '0612345601', mot_de_passe: 'password123', statut: 'actif' },
-        { nom: 'Martin', prenom: 'Sophie', poste: 'medecin', email: 'sophie.martin@chat.com', telephone: '0612345602', mot_de_passe: 'password123', statut: 'actif' },
+        { nom: 'Dellal', prenom: 'Jamal', poste: 'medecin', email: 'jean.dupont@chat.com', telephone: '0612345601', mot_de_passe: 'password123', statut: 'actif' },
+        { nom: 'Mansouri', prenom: 'Soumia', poste: 'medecin', email: 'sophie.martin@chat.com', telephone: '0612345602', mot_de_passe: 'password123', statut: 'actif' },
         // Infirmiers
         { nom: 'Benammar', prenom: 'Khaled', poste: 'infirmier', email: 'khaled.benammar@chat.com', telephone: '0612345610', mot_de_passe: 'password123', statut: 'actif' },
         { nom: 'Zahra', prenom: 'Fatima', poste: 'infirmier', email: 'fatima.zahra@chat.com', telephone: '0612345611', mot_de_passe: 'password123', statut: 'actif' },
         // Administratif (déjà existant)
         { nom: 'Admin', prenom: 'Principal', poste: 'administratif', email: 'admin@chat.com', telephone: '0612345620', mot_de_passe: 'admin123', statut: 'actif' },
         // Hôtellerie
-        { nom: 'Touré', prenom: 'Ali', poste: 'hotellerie', email: 'ali.toure@chat.com', telephone: '0612345630', mot_de_passe: 'password123', statut: 'actif' },
+        { nom: 'Touril', prenom: 'Ali', poste: 'hotellerie', email: 'ali.toure@chat.com', telephone: '0612345630', mot_de_passe: 'password123', statut: 'actif' },
         // Logistique
-        { nom: 'Diop', prenom: 'Moussa', poste: 'logistique', email: 'moussa.diop@chat.com', telephone: '0612345640', mot_de_passe: 'password123', statut: 'actif' },
+        { nom: 'Dilawi', prenom: 'Moussa', poste: 'logistique', email: 'moussa.diop@chat.com', telephone: '0612345640', mot_de_passe: 'password123', statut: 'actif' },
         // Qualité
         { nom: 'Diallo', prenom: 'Aïcha', poste: 'qualite', email: 'aicha.diallo@chat.com', telephone: '0612345650', mot_de_passe: 'password123', statut: 'actif' },
         // Voyages
-        { nom: 'Sow', prenom: 'Ousmane', poste: 'voyages', email: 'ousmane.sow@chat.com', telephone: '0612345660', mot_de_passe: 'password123', statut: 'actif' }
+        { nom: 'Sowwane', prenom: 'Ousmane', poste: 'voyages', email: 'ousmane.sow@chat.com', telephone: '0612345660', mot_de_passe: 'password123', statut: 'actif' }
     ];
 
     let completed = 0;
