@@ -83,7 +83,7 @@
         // Charger la liste des médecins (personnel avec poste = medecin)
         async function chargerMedecins() {
             try {
-                const medecins = await API.get('/personnel/medecins');
+                const medecins = await API.get('/personnel/medecin');
                 const select = document.getElementById('id_medecin');
                 select.innerHTML = '<option value="">Sélectionner un médecin</option>';
                 medecins.forEach(m => {
