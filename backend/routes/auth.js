@@ -88,19 +88,38 @@ router.post('/login', async (req, res) => {
 });
 // ROUTE TEMPORAIRE POUR AJOUTER LA COLONNE mot_de_passe
 router.get('/setup', (req, res) => {
-    const sql = `ALTER TABLE personnel ADD COLUMN mot_de_passe TEXT;`;
-    db.run(sql, (err) => {
+    // 1. Ajouter la colonne mot_de_passe
+    const addColumnSQL = `ALTER TABLE personnel ADD COLUMN mot_de_passe TEXT;`;
+    
+    db.run(addColumnSQL, (err) => {
+        // Si l'erreur n'est pas "duplicate column name", on continue
         if (err && !err.message.includes('duplicate column name')) {
-            return res.status(500).json({ error: err.message });
+            console.error('Erreur ajout colonne:', err.message);
+            // On continue quand même, la colonne existe peut-être déjà
         }
-        // Ajouter l'utilisateur admin
-        const insertSql = `INSERT OR REPLACE INTO personnel (id_personnel, nom, prenom, poste, email, telephone, mot_de_passe, statut) 
-                           VALUES (1, 'Admin', 'Principal', 'administratif', 'admin@chat.com', '0612345620', 'admin123', 'actif')`;
-        db.run(insertSql, (err2) => {
+        
+        // 2. Ajouter l'utilisateur admin
+        const insertAdmin = `INSERT OR REPLACE INTO personnel (id_personnel, nom, prenom, poste, email, telephone, mot_de_passe, statut) 
+                             VALUES (1, 'Admin', 'Principal', 'administratif', 'admin@chat.com', '0612345620', 'admin123', 'actif')`;
+        
+        db.run(insertAdmin, (err2) => {
             if (err2) {
+                console.error('Erreur insertion admin:', err2.message);
                 return res.status(500).json({ error: err2.message });
             }
-            res.json({ message: '✅ Base de données initialisée avec succès' });
+            
+            // 3. Vérifier que la colonne existe maintenant
+            const checkColumn = `PRAGMA table_info(personnel)`;
+            db.all(checkColumn, (err3, columns) => {
+                if (err3) {
+                    return res.status(500).json({ error: err3.message });
+                }
+                const hasPasswordColumn = columns.some(col => col.name === 'mot_de_passe');
+                res.json({ 
+                    message: hasPasswordColumn ? '✅ Base prête, colonne mot_de_passe existe' : '⚠️ Colonne mot_de_passe toujours absente',
+                    columns: columns.map(c => c.name)
+                });
+            });
         });
     });
 });
