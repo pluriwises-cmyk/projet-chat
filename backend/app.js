@@ -18,50 +18,75 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../frontend')));
 console.log('📁 Dossier frontend servi:', path.join(__dirname, '../frontend'));
 
+// backend/app.js
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const db = require('./database/db');
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+const authRoutes = require('./routes/auth');
+
+// Middlewares
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// Dossier statique (frontend)
+app.use(express.static(path.join(__dirname, '../frontend')));
+console.log('📁 Dossier frontend servi:', path.join(__dirname, '../frontend'));
+
 // ===== INITIALISATION AUTOMATIQUE DE LA BASE =====
 const initDatabase = () => {
     console.log('🔄 Initialisation de la base...');
     
     // 1. Ajouter la colonne mot_de_passe si elle n'existe pas
     db.run(`ALTER TABLE personnel ADD COLUMN mot_de_passe TEXT`, (err) => {
-        if (err && !err.message.includes('duplicate column name')) {
-            console.log('ℹ️ Erreur (ignoree):', err.message);
-        } else {
-            console.log('✅ Colonne mot_de_passe vérifiée/ajoutée');
-        }
-    });
-
-    // 2. Liste des utilisateurs par défaut
-    const users = [
-        ['Dellal', 'Jamal', 'medecin', 'jean.dupont@chat.com', '0612345601', 'password123', 'actif'],
-        ['Mansouri', 'Soumia', 'medecin', 'sophie.martin@chat.com', '0612345602', 'password123', 'actif'],
-        ['Benammar', 'Khaled', 'infirmier', 'khaled.benammar@chat.com', '0612345610', 'password123', 'actif'],
-        ['Zahra', 'Fatima', 'infirmier', 'fatima.zahra@chat.com', '0612345611', 'password123', 'actif'],
-        ['Admin', 'Principal', 'administratif', 'admin@chat.com', '0612345620', 'admin123', 'actif'],
-        ['Touril', 'Ali', 'hotellerie', 'ali.toure@chat.com', '0612345630', 'password123', 'actif'],
-        ['Dilawi', 'Moussa', 'logistique', 'moussa.diop@chat.com', '0612345640', 'password123', 'actif'],
-        ['Diallo', 'Aïcha', 'qualite', 'aicha.diallo@chat.com', '0612345650', 'password123', 'actif'],
-        ['Sowwane', 'Ousmane', 'voyages', 'ousmane.sow@chat.com', '0612345660', 'password123', 'actif']
-    ];
-
-    // 3. Insérer ou ignorer les utilisateurs
-    users.forEach(user => {
-        const sql = `INSERT OR IGNORE INTO personnel (nom, prenom, poste, email, telephone, mot_de_passe, statut) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?)`;
-        db.run(sql, user, (err) => {
-            if (err) {
-                console.error(`❌ Erreur insertion ${user[1]} ${user[0]}:`, err.message);
+        if (err) {
+            if (err.message.includes('duplicate column name')) {
+                console.log('✅ Colonne mot_de_passe existe déjà');
+            } else {
+                console.log('⚠️ Erreur lors de l\'ajout de la colonne:', err.message);
             }
+        } else {
+            console.log('✅ Colonne mot_de_passe ajoutée avec succès');
+        }
+        
+        // 2. Une fois la colonne ajoutée (ou déjà existante), on insère les utilisateurs
+        const users = [
+            ['Dellal', 'Jamal', 'medecin', 'jean.dupont@chat.com', '0612345601', 'password123', 'actif'],
+            ['Mansouri', 'Soumia', 'medecin', 'sophie.martin@chat.com', '0612345602', 'password123', 'actif'],
+            ['Benammar', 'Khaled', 'infirmier', 'khaled.benammar@chat.com', '0612345610', 'password123', 'actif'],
+            ['Zahra', 'Fatima', 'infirmier', 'fatima.zahra@chat.com', '0612345611', 'password123', 'actif'],
+            ['Admin', 'Principal', 'administratif', 'admin@chat.com', '0612345620', 'admin123', 'actif'],
+            ['Touril', 'Ali', 'hotellerie', 'ali.toure@chat.com', '0612345630', 'password123', 'actif'],
+            ['Dilawi', 'Moussa', 'logistique', 'moussa.diop@chat.com', '0612345640', 'password123', 'actif'],
+            ['Diallo', 'Aïcha', 'qualite', 'aicha.diallo@chat.com', '0612345650', 'password123', 'actif'],
+            ['Sowwane', 'Ousmane', 'voyages', 'ousmane.sow@chat.com', '0612345660', 'password123', 'actif']
+        ];
+
+        let completed = 0;
+        users.forEach(user => {
+            const sql = `INSERT OR IGNORE INTO personnel (nom, prenom, poste, email, telephone, mot_de_passe, statut) 
+                         VALUES (?, ?, ?, ?, ?, ?, ?)`;
+            db.run(sql, user, (err) => {
+                if (err) {
+                    console.error(`❌ Erreur insertion ${user[1]} ${user[0]}:`, err.message);
+                }
+                completed++;
+                if (completed === users.length) {
+                    console.log('✅ Initialisation automatique des utilisateurs terminée');
+                }
+            });
         });
     });
-
-    console.log('✅ Initialisation automatique des utilisateurs terminée');
 };
 
-// Exécuter l'initialisation APRÈS avoir vérifié que la base est connectée
+// Exécuter l'initialisation APRÈS la connexion à la base
 setTimeout(() => {
     initDatabase();
-}, 1000);
+}, 2000);
 // ===== FIN INITIALISATION =====
 
 // ==================== ROUTES API ====================
@@ -93,8 +118,6 @@ app.use('/api/specialistes', require('./routes/specialistes'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/documents', require('./routes/documents'));
 app.use('/api/stats', require('./routes/stats'));
-app.use('/api/soins', require('./routes/soins'));
-app.use('/api/constantes', require('./routes/constantes'));
 app.use('/api/auth', authRoutes);
 
 // ==================== TEST ====================
@@ -122,4 +145,3 @@ process.on('SIGINT', () => {
         process.exit(err ? 1 : 0);
     });
 });
-
