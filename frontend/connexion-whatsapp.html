@@ -2,15 +2,13 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>WhatsApp Connect - CHAT</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
     <link rel="stylesheet" href="css/style.css">
-    <script src="/js/api.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap');
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Poppins', sans-serif;
@@ -19,14 +17,21 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
-            overflow: hidden;
             padding: 20px;
         }
-        .bg-bubbles { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
+        /* Bulles décoratives */
+        .bg-bubbles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
         .bubble {
             position: absolute;
-            background: rgba(255,255,255,0.1);
+            background: rgba(255,255,255,0.15);
             border-radius: 50%;
             animation: float 8s infinite;
         }
@@ -37,190 +42,300 @@
             0%,100% { transform: translateY(0) rotate(0deg); }
             50% { transform: translateY(-20px) rotate(5deg); }
         }
+        /* Carte principale */
         .whatsapp-premium {
             position: relative;
             z-index: 2;
-            max-width: 900px;
-            width: 95%;
-            background: rgba(255,255,255,0.95);
-            backdrop-filter: blur(10px);
-            border-radius: 50px;
-            box-shadow: 0 30px 60px rgba(0,0,0,0.3);
+            max-width: 550px;
+            width: 100%;
+            background: white;
+            border-radius: 40px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.3);
             overflow: hidden;
-            animation: slideUp 0.6s cubic-bezier(0.16,1,0.3,1);
+            animation: slideUp 0.5s ease;
         }
         @keyframes slideUp {
-            from { opacity: 0; transform: translateY(50px); }
+            from { opacity: 0; transform: translateY(30px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        /* En-tête */
         .whatsapp-header {
-            background: linear-gradient(135deg, #075E54 0%, #128C7E 50%, #25D366 100%);
+            background: linear-gradient(135deg, #075E54, #128C7E, #25D366);
             padding: 30px 20px;
-            color: white;
             text-align: center;
+            color: white;
         }
-        .header-icon { font-size: 4rem; margin-bottom: 10px; }
-        .whatsapp-header h1 { font-size: 2rem; margin-bottom: 5px; }
-        .whatsapp-header p { font-size: 0.9rem; }
+        .header-icon {
+            font-size: 4rem;
+            margin-bottom: 10px;
+        }
+        .whatsapp-header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        /* Corps avec scroll léger */
         .whatsapp-body {
-            padding: 20px;
+            padding: 25px;
             max-height: 70vh;
             overflow-y: auto;
         }
-        .steps-indicator { margin-bottom: 20px; }
-        .step-number { width: 35px; height: 35px; font-size: 0.9rem; }
-        .step-label { font-size: 0.75rem; }
-        .feature-card { padding: 15px; margin-bottom: 15px; }
-        .feature-icon { width: 45px; height: 45px; font-size: 1.2rem; }
-        .premium-input { padding: 12px 15px; font-size: 1rem; }
-        .code-container { gap: 8px; margin: 15px 0; }
-        .code-box { width: 50px; height: 60px; font-size: 1.8rem; }
-        .display-code input { font-size: 1.2rem; letter-spacing: 2px; }
-        .timer-container { padding: 10px 15px; margin: 15px 0; }
-        .timer-text { font-size: 1.2rem; }
-        .btn-premium { padding: 12px; font-size: 1rem; }
-        .security-badge { margin-top: 15px; padding: 8px 15px; }
-        @media (max-width: 768px) {
-            .whatsapp-header { padding: 20px; }
-            .whatsapp-header h1 { font-size: 1.5rem; }
-            .code-box { width: 45px; height: 55px; font-size: 1.5rem; }
-            .whatsapp-body { padding: 15px; }
+        /* Indicateur d'étapes */
+        .steps-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        .steps-indicator::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 1;
+        }
+        .step-item {
+            position: relative;
+            z-index: 2;
+            background: white;
+            text-align: center;
+            flex: 1;
+        }
+        .step-number {
+            width: 40px;
+            height: 40px;
+            background: #f0f0f0;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+        .step-item.active .step-number {
+            background: #25D366;
+            color: white;
+            box-shadow: 0 5px 15px rgba(37,211,102,0.3);
+        }
+        .step-item.completed .step-number {
+            background: #075E54;
+            color: white;
+        }
+        .step-label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #666;
+        }
+        .step-item.active .step-label {
+            color: #25D366;
+        }
+        /* Contenu des étapes */
+        .step-content {
+            display: none;
+            animation: fade 0.3s ease;
+        }
+        .step-content.active {
+            display: block;
+        }
+        @keyframes fade {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Champs et boutons */
+        .premium-input {
+            width: 100%;
+            padding: 14px 18px;
+            border: 2px solid #e0e0e0;
+            border-radius: 30px;
+            font-size: 1rem;
+            margin-bottom: 15px;
+        }
+        .premium-input:focus {
+            border-color: #25D366;
+            outline: none;
+        }
+        .btn-premium {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 1rem;
+            transition: 0.2s;
+        }
+        .btn-whatsapp {
+            background: linear-gradient(135deg, #25D366, #128C7E);
+            color: white;
+        }
+        .btn-outline-whatsapp {
+            background: white;
+            border: 2px solid #25D366;
+            color: #25D366;
+        }
+        .code-container {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin: 25px 0;
+        }
+        .code-box {
+            width: 55px;
+            height: 65px;
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            border: 2px solid #ddd;
+            border-radius: 15px;
+        }
+        .code-box:focus {
+            border-color: #25D366;
+            outline: none;
+        }
+        .display-code {
+            background: #e9f7ef;
+            border-radius: 20px;
+            padding: 15px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .timer-container {
+            background: #f8f9fa;
+            border-radius: 50px;
+            padding: 12px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 20px 0;
+        }
+        .security-badge {
+            background: #f8f9fa;
+            border-radius: 50px;
+            padding: 10px 20px;
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.8rem;
+        }
+        @media (max-width: 500px) {
+            .code-box { width: 45px; height: 55px; font-size: 1.4rem; }
+            .whatsapp-body { padding: 20px; }
         }
     </style>
 </head>
 <body>
-    <div class="bg-bubbles"><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div></div>
 
-    <div class="whatsapp-premium">
-        <div class="whatsapp-header">
-            <i class="fab fa-whatsapp header-icon"></i>
-            <h1>WhatsApp Connect</h1>
-            <p><i class="fas fa-shield-alt me-2"></i>Connexion sécurisée • Instantanée • Fiable</p>
-        </div>
+<div class="bg-bubbles"><div class="bubble"></div><div class="bubble"></div><div class="bubble"></div></div>
 
-        <div class="whatsapp-body">
-            <div class="steps-indicator">
-                <div class="step-item active" id="step1-indicator"><div class="step-number">1</div><div class="step-label">Numéro</div></div>
-                <div class="step-item" id="step2-indicator"><div class="step-number">2</div><div class="step-label">Code</div></div>
-                <div class="step-item" id="step3-indicator"><div class="step-number">3</div><div class="step-label">Connexion</div></div>
-            </div>
-
-            <div id="errorMessage" class="alert alert-danger d-none"><i class="fas fa-exclamation-circle me-2"></i><span id="errorText"></span></div>
-
-            <!-- STEP 1 -->
-            <div id="step1" class="step-content active">
-                <div class="feature-card">
-                    <div class="d-flex align-items-center">
-                        <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
-                        <div><h5 class="mb-1">Connexion 100% sécurisée</h5><p class="text-muted mb-0">Votre numéro ne sera jamais partagé</p></div>
-                    </div>
-                </div>
-                <div class="input-group-premium">
-                    <label class="input-label"><i class="fas fa-phone-alt"></i> Votre numéro WhatsApp</label>
-                    <input type="tel" id="phone" class="premium-input" placeholder="+221 77 123 45 67" value="+221771234567">
-                    <small class="text-muted mt-2 d-block"><i class="fas fa-info-circle me-1"></i> Format international recommandé</small>
-                </div>
-                <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" id="terms" checked>
-                    <label class="form-check-label">J'accepte de recevoir un code de confirmation par WhatsApp</label>
-                </div>
-                <button class="btn-premium btn-whatsapp" onclick="envoyerCode()"><i class="fab fa-whatsapp"></i> Envoyer le code <i class="fas fa-arrow-right ms-2"></i></button>
-                <div class="security-badge"><i class="fas fa-lock"></i><span class="small">Connexion 100% sécurisée • Chiffrement de bout en bout</span></div>
-                <div class="text-center mt-3"><a href="index.html" class="text-decoration-none small"><i class="fas fa-arrow-left me-2"></i>Retour à l'accueil</a></div>
-            </div>
-
-            <!-- STEP 2 -->
-            <div id="step2" class="step-content">
-                <div class="feature-card">
-                    <div class="d-flex align-items-center">
-                        <div class="feature-icon"><i class="fas fa-envelope"></i></div>
-                        <div><h5 class="mb-1">Code envoyé !</h5><p class="text-muted mb-0">Au numéro <strong id="phoneDisplay" class="text-success"></strong></p></div>
-                    </div>
-                </div>
-                <div class="text-center mb-2"><span class="badge bg-success px-3 py-2"><i class="fas fa-clock me-2"></i>Code valable 2 minutes</span></div>
-
-                <!-- Champ pour afficher le code reçu -->
-                <div class="display-code bg-light p-3 rounded mb-3 text-center">
-                    <label class="fw-bold text-success"><i class="fas fa-key me-2"></i>Votre code :</label>
-                    <input type="text" id="receivedCode" class="form-control text-center" readonly style="font-size: 1.3rem; font-weight: bold; background: #e8f5e9; letter-spacing: 2px;">
-                    <small class="text-muted mt-2 d-block"><i class="fas fa-copy me-1"></i> Copiez ce code et collez-le ci-dessous</small>
-                </div>
-
-                <div class="code-container">
-                    <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 1)" oninput="checkFilled(this)">
-                    <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 2)" oninput="checkFilled(this)">
-                    <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 3)" oninput="checkFilled(this)">
-                    <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 4)" oninput="checkFilled(this)">
-                    <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 5)" oninput="checkFilled(this)">
-                    <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 6)" oninput="checkFilled(this)">
-                </div>
-
-                <div class="timer-container">
-                    <div class="timer-circle"><i class="fas fa-clock"></i></div>
-                    <div><div class="small text-muted">Temps restant</div><div class="timer-text" id="countdown">02:00</div></div>
-                    <button class="btn btn-sm btn-outline-secondary" onclick="renvoyerCode()"><i class="fas fa-redo-alt"></i></button>
-                </div>
-
-                <button class="btn-premium btn-whatsapp mt-3" onclick="verifierCode()"><i class="fas fa-check-circle"></i> Vérifier le code</button>
-                <button class="btn-premium btn-outline-whatsapp mt-2" onclick="retourEtape1()"><i class="fas fa-arrow-left"></i> Modifier le numéro</button>
-            </div>
-
-            <!-- STEP 3 -->
-            <div id="step3" class="step-content">
-                <div class="success-animation text-center py-4">
-                    <div class="checkmark-circle mx-auto mb-4"><i class="fas fa-check fa-3x text-white"></i></div>
-                    <h2 class="fw-bold text-success">Connexion réussie !</h2>
-                    <p class="text-muted">Redirection vers votre espace patient</p>
-                    <div class="loading-dots"><div></div><div></div><div></div></div>
-                </div>
-            </div>
-        </div>
+<div class="whatsapp-premium">
+    <div class="whatsapp-header">
+        <i class="fab fa-whatsapp header-icon"></i>
+        <h1>WhatsApp Connect</h1>
+        <p>Connexion sécurisée • Instantanée</p>
     </div>
 
-    <script>
-        let countdownInterval, timeLeft = 120, currentPhone = '', currentCode = '';
-        function showError(msg) { let e = document.getElementById('errorMessage'); document.getElementById('errorText').innerText = msg; e.classList.remove('d-none'); setTimeout(() => e.classList.add('d-none'), 3000); }
-        function updateSteps(step) {
-            ['step1-indicator','step2-indicator','step3-indicator'].forEach(id => document.getElementById(id).classList.remove('active','completed'));
-            if(step===1) document.getElementById('step1-indicator').classList.add('active');
-            else if(step===2) { document.getElementById('step1-indicator').classList.add('completed'); document.getElementById('step2-indicator').classList.add('active'); }
-            else if(step===3) { document.getElementById('step1-indicator').classList.add('completed'); document.getElementById('step2-indicator').classList.add('completed'); document.getElementById('step3-indicator').classList.add('active'); }
-        }
-        function envoyerCode() {
-            let phone = document.getElementById('phone').value, terms = document.getElementById('terms').checked;
-            if(!phone) return showError('Numéro requis');
-            if(!terms) return showError('Acceptez les conditions');
-            fetch('/api/whatsapp/request-code', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({telephone:phone}) })
-            .then(res=>res.json()).then(data=>{
-                if(data.success) {
-                    currentPhone=phone; currentCode=data.code_dev||'';
-                    document.getElementById('receivedCode').value=currentCode;
-                    document.getElementById('step1').classList.remove('active'); document.getElementById('step2').classList.add('active');
-                    updateSteps(2); document.getElementById('phoneDisplay').innerText=phone; startCountdown();
-                } else showError(data.error||'Erreur');
-            }).catch(()=>showError('Erreur connexion'));
-        }
-        function verifierCode() {
-            let inputs=document.querySelectorAll('.code-box'), code=''; inputs.forEach(i=>code+=i.value);
-            if(code.length<6) return showError('Code incomplet');
-            fetch('/api/whatsapp/verify-code', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({telephone:currentPhone,code:code}) })
-            .then(res=>res.json()).then(data=>{
-                if(data.success) {
-                    document.getElementById('step2').classList.remove('active'); document.getElementById('step3').classList.add('active');
-                    updateSteps(3);
-                    if(data.token) localStorage.setItem('token',data.token);
-                    if(data.user) localStorage.setItem('user',JSON.stringify(data.user));
-                    setTimeout(()=>{ window.location.href = data.tempToken ? `inscription-patient.html?tel=${encodeURIComponent(currentPhone)}&token=${data.tempToken}` : (data.redirect||'dashboard-patient.html'); },2000);
-                } else { showError(data.error||'Code incorrect'); inputs.forEach(i=>{ i.value=''; i.classList.remove('filled'); }); inputs[0].focus(); }
-            }).catch(()=>showError('Erreur connexion'));
-        }
-        function moveToNext(current,nextIndex){ if(current.value.length===1 && nextIndex<6){ let next=document.querySelectorAll('.code-box')[nextIndex]; if(next) next.focus(); } }
-        function checkFilled(input){ if(input.value.length===1) input.classList.add('filled'); else input.classList.remove('filled'); }
-        function startCountdown(){ timeLeft=120; updateCountdown(); countdownInterval=setInterval(()=>{ timeLeft--; updateCountdown(); if(timeLeft<=0){ clearInterval(countdownInterval); document.getElementById('countdown').innerHTML='00:00'; document.getElementById('countdown').classList.add('warning'); showError('Code expiré'); } },1000); }
-        function updateCountdown(){ let m=Math.floor(timeLeft/60), s=timeLeft%60; document.getElementById('countdown').innerText=`${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; if(timeLeft<=30) document.getElementById('countdown').classList.add('warning'); }
-        function renvoyerCode(){ clearInterval(countdownInterval); fetch('/api/whatsapp/request-code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({telephone:currentPhone})}).then(res=>res.json()).then(data=>{ if(data.success){ currentCode=data.code_dev||''; document.getElementById('receivedCode').value=currentCode; startCountdown(); showError('Nouveau code envoyé'); } else showError(data.error||'Erreur'); }).catch(()=>showError('Erreur connexion')); }
-        function retourEtape1(){ clearInterval(countdownInterval); document.getElementById('step2').classList.remove('active'); document.getElementById('step1').classList.add('active'); updateSteps(1); }
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <div class="whatsapp-body">
+        <!-- Indicateur d'étapes -->
+        <div class="steps-indicator">
+            <div class="step-item active" id="step1-indicator"><div class="step-number">1</div><div class="step-label">Numéro</div></div>
+            <div class="step-item" id="step2-indicator"><div class="step-number">2</div><div class="step-label">Code</div></div>
+            <div class="step-item" id="step3-indicator"><div class="step-number">3</div><div class="step-label">Connexion</div></div>
+        </div>
+
+        <div id="errorMessage" class="alert alert-danger d-none mt-2"></div>
+
+        <!-- ÉTAPE 1 : Numéro -->
+        <div id="step1" class="step-content active">
+            <div class="mb-3">
+                <label class="fw-bold"><i class="fas fa-phone-alt me-2 text-success"></i>Votre numéro WhatsApp</label>
+                <input type="tel" id="phone" class="premium-input" placeholder="+221 77 123 45 67" value="+221771234567">
+                <small class="text-muted">Format international recommandé</small>
+            </div>
+            <div class="form-check mb-4">
+                <input class="form-check-input" type="checkbox" id="terms" checked>
+                <label>J'accepte de recevoir un code par WhatsApp</label>
+            </div>
+            <button class="btn-premium btn-whatsapp" onclick="envoyerCode()"><i class="fab fa-whatsapp me-2"></i>Envoyer le code</button>
+            <div class="security-badge"><i class="fas fa-lock me-2"></i>Connexion chiffrée de bout en bout</div>
+            <div class="text-center mt-3"><a href="index.html" class="text-decoration-none small">← Retour à l'accueil</a></div>
+        </div>
+
+        <!-- ÉTAPE 2 : Code -->
+        <div id="step2" class="step-content">
+            <div class="alert alert-info text-center py-2">📲 Code envoyé au <strong id="phoneDisplay"></strong></div>
+            
+            <!-- Zone d'affichage du code reçu -->
+            <div class="display-code">
+                <i class="fas fa-key me-2 text-success"></i><strong>Votre code de vérification</strong>
+                <input type="text" id="receivedCode" class="form-control text-center mt-2" readonly style="font-size:1.3rem; font-weight:bold; background:#fff; border:1px solid #25D366;">
+                <small class="text-muted">Copiez ce code et saisissez-le ci-dessous</small>
+            </div>
+
+            <div class="code-container">
+                <input type="text" class="code-box" maxlength="1" oninput="moveToNext(this,0)">
+                <input type="text" class="code-box" maxlength="1" oninput="moveToNext(this,1)">
+                <input type="text" class="code-box" maxlength="1" oninput="moveToNext(this,2)">
+                <input type="text" class="code-box" maxlength="1" oninput="moveToNext(this,3)">
+                <input type="text" class="code-box" maxlength="1" oninput="moveToNext(this,4)">
+                <input type="text" class="code-box" maxlength="1" oninput="moveToNext(this,5)">
+            </div>
+
+            <div class="timer-container">
+                <i class="fas fa-clock fa-2x text-success"></i>
+                <span class="fw-bold" id="countdown">02:00</span>
+                <button class="btn btn-sm btn-link text-success" onclick="renvoyerCode()">Renvoyer</button>
+            </div>
+
+            <button class="btn-premium btn-whatsapp mt-2" onclick="verifierCode()"><i class="fas fa-check-circle me-2"></i>Vérifier le code</button>
+            <button class="btn-premium btn-outline-whatsapp mt-2" onclick="retourEtape1()">← Modifier le numéro</button>
+        </div>
+
+        <!-- ÉTAPE 3 : Succès -->
+        <div id="step3" class="step-content text-center py-4">
+            <i class="fas fa-check-circle fa-5x text-success mb-3"></i>
+            <h3 class="text-success">Connexion réussie !</h3>
+            <p>Redirection en cours...</p>
+            <div class="spinner-border text-success mt-3"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    let countdownInterval, timeLeft = 120, currentPhone = '', currentCode = '';
+    const step1 = document.getElementById('step1'), step2 = document.getElementById('step2'), step3 = document.getElementById('step3');
+    const step1Ind = document.getElementById('step1-indicator'), step2Ind = document.getElementById('step2-indicator'), step3Ind = document.getElementById('step3-indicator');
+
+    function showError(msg) { let e = document.getElementById('errorMessage'); e.textContent = msg; e.classList.remove('d-none'); setTimeout(() => e.classList.add('d-none'), 3000); }
+    function updateSteps(step) {
+        [step1Ind, step2Ind, step3Ind].forEach(i => i.classList.remove('active', 'completed'));
+        if(step===1) { step1Ind.classList.add('active'); step1.classList.add('active'); step2.classList.remove('active'); step3.classList.remove('active'); }
+        else if(step===2) { step1Ind.classList.add('completed'); step2Ind.classList.add('active'); step1.classList.remove('active'); step2.classList.add('active'); step3.classList.remove('active'); }
+        else if(step===3) { step1Ind.classList.add('completed'); step2Ind.classList.add('completed'); step3Ind.classList.add('active'); step1.classList.remove('active'); step2.classList.remove('active'); step3.classList.add('active'); }
+    }
+    function envoyerCode() {
+        let phone = document.getElementById('phone').value, terms = document.getElementById('terms').checked;
+        if(!phone) return showError('Numéro requis');
+        if(!terms) return showError('Acceptez les conditions');
+        fetch('/api/whatsapp/request-code', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({telephone:phone}) })
+        .then(res=>res.json()).then(data=>{
+            if(data.success) { currentPhone=phone; currentCode=data.code_dev||''; document.getElementById('receivedCode').value=currentCode; document.getElementById('phoneDisplay').innerText=phone; updateSteps(2); startCountdown(); }
+            else showError(data.error||'Erreur');
+        }).catch(()=>showError('Erreur connexion'));
+    }
+    function verifierCode() {
+        let inputs = document.querySelectorAll('.code-box'), code = ''; inputs.forEach(i=>code+=i.value);
+        if(code.length<6) return showError('Code incomplet');
+        fetch('/api/whatsapp/verify-code', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({telephone:currentPhone,code}) })
+        .then(res=>res.json()).then(data=>{
+            if(data.success) { updateSteps(3); if(data.token) localStorage.setItem('token',data.token); if(data.user) localStorage.setItem('user',JSON.stringify(data.user)); setTimeout(()=>{ window.location.href = data.tempToken ? `inscription-patient.html?tel=${encodeURIComponent(currentPhone)}&token=${data.tempToken}` : (data.redirect||'dashboard-patient.html'); },2000); }
+            else { showError('Code incorrect'); inputs.forEach(i=>i.value=''); inputs[0].focus(); }
+        }).catch(()=>showError('Erreur serveur'));
+    }
+    function moveToNext(current, idx) { if(current.value.length===1 && idx<5) document.querySelectorAll('.code-box')[idx+1].focus(); }
+    function startCountdown() { timeLeft=120; updateCountdown(); if(countdownInterval) clearInterval(countdownInterval); countdownInterval = setInterval(()=>{ timeLeft--; updateCountdown(); if(timeLeft<=0){ clearInterval(countdownInterval); showError('Code expiré'); } },1000); }
+    function updateCountdown() { let m=Math.floor(timeLeft/60), s=timeLeft%60; document.getElementById('countdown').innerText=`${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`; }
+    function renvoyerCode() { clearInterval(countdownInterval); fetch('/api/whatsapp/request-code',{ method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({telephone:currentPhone}) }).then(res=>res.json()).then(data=>{ if(data.success){ currentCode=data.code_dev||''; document.getElementById('receivedCode').value=currentCode; startCountdown(); showError('Nouveau code envoyé'); } else showError(data.error||'Erreur'); }).catch(()=>showError('Erreur connexion')); }
+    function retourEtape1() { clearInterval(countdownInterval); updateSteps(1); }
+</script>
 </body>
 </html>
