@@ -416,12 +416,21 @@
                     <div class="profil-option" data-role="voyages"><i class="fas fa-plane"></i><span>Voyages</span></div>
                 </div>
 
-                <div class="demo-account-select">
-                   <label><i class="fas fa-users me-2"></i>Compte de démonstration :</label>
-                   <select id="demoAccountSelect" class="form-select" onchange="fillDemoAccount()">
-                   <option value="">-- Chargement des comptes... --</option>
-                   </select>
-                </div>
+               <div class="demo-account-select">
+    <label><i class="fas fa-users me-2"></i>Compte de démonstration :</label>
+    <select id="demoAccountSelect" class="form-select" onchange="fillDemoAccount()">
+        <option value="">-- Choisissez un compte --</option>
+        <option value="medecin|jean.dupont@chat.com|password123">👨‍⚕️ Médecin – Dr. Jean Dupont</option>
+        <option value="medecin|sophie.martin@chat.com|password123">👩‍⚕️ Médecin – Dr. Sophie Martin</option>
+        <option value="infirmier|khaled.benammar@chat.com|password123">🩺 Infirmier – Khaled Benammar</option>
+        <option value="infirmier|fatima.zahra@chat.com|password123">🩺 Infirmière – Fatima Zahra</option>
+        <option value="administratif|admin@chat.com|admin123">📊 Administratif – Admin Principal</option>
+        <option value="hotellerie|ali.toure@chat.com|password123">🏨 Hôtellerie – Ali Touré</option>
+        <option value="logistique|moussa.diop@chat.com|password123">📦 Logistique – Moussa Diop</option>
+        <option value="qualite|aicha.diallo@chat.com|password123">⭐ Qualité – Aïcha Diallo</option>
+        <option value="voyages|ousmane.sow@chat.com|password123">✈️ Voyages – Ousmane Sow</option>
+    </select>
+</div>
 
                 <input type="text" id="username" class="form-control" placeholder="Email" value="admin@chat.com">
                 <input type="password" id="password" class="form-control" placeholder="Mot de passe" value="admin123">
