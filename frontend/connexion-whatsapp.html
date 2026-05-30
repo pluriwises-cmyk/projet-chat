@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>WhatsApp Connect - Hôpital Saint-Jean</title>
+    <title>WhatsApp Connect - CHAT</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
@@ -257,6 +257,28 @@
             border-color: #25D366;
             background: #f0f9f0;
         }
+        .display-code {
+            background: #f0f9f0;
+            border: 2px solid #25D366;
+            border-radius: 15px;
+            padding: 15px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        .display-code label {
+            font-weight: 600;
+            color: #075E54;
+            margin-bottom: 10px;
+            display: block;
+        }
+        .display-code input {
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: bold;
+            letter-spacing: 5px;
+            background: white;
+            border: 1px solid #25D366;
+        }
         .timer-container {
             background: #f8f9fa;
             border-radius: 50px;
@@ -477,6 +499,15 @@
                     <span class="badge bg-success px-3 py-2"><i class="fas fa-clock me-2"></i>Code valable 2 minutes</span>
                 </div>
 
+                <!-- AFFICHAGE DU CODE REÇU -->
+                <div class="display-code">
+                    <label><i class="fas fa-key me-2"></i>Votre code de vérification :</label>
+                    <input type="text" id="receivedCode" class="form-control text-center" readonly style="font-size: 1.5rem; font-weight: bold; background: #e8f5e9;">
+                    <small class="text-muted mt-2 d-block">
+                        <i class="fas fa-copy me-1"></i> Copiez ce code et collez-le dans les cases ci-dessous
+                    </small>
+                </div>
+
                 <div class="code-container">
                     <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 1)" oninput="checkFilled(this)">
                     <input type="text" class="code-box" maxlength="1" onkeyup="moveToNext(this, 2)" oninput="checkFilled(this)">
@@ -516,12 +547,12 @@
         let countdownInterval;
         let timeLeft = 120;
         let currentPhone = '';
+        let currentCode = '';
 
         function showError(message) {
             const errorDiv = document.getElementById('errorMessage');
             document.getElementById('errorText').textContent = message;
             errorDiv.classList.remove('d-none');
-            console.log('⏱️ Lancement du setTimeou unique 01');
             setTimeout(() => errorDiv.classList.add('d-none'), 3000);
         }
 
@@ -548,7 +579,6 @@
             if (!phone) {
                 showError('Veuillez entrer votre numéro');
                 document.getElementById('phone').classList.add('error');
-                console.log('⏱️ Lancement du setTimeou unique 02');
                 setTimeout(() => document.getElementById('phone').classList.remove('error'), 500);
                 return;
             }
@@ -566,14 +596,16 @@
             .then(data => {
                 if (data.success) {
                     currentPhone = phone;
+                    currentCode = data.code_dev || '';
+                    
+                    // Afficher le code dans le champ
+                    document.getElementById('receivedCode').value = currentCode;
+                    
                     document.getElementById('step1').classList.remove('active');
                     document.getElementById('step2').classList.add('active');
                     updateSteps(2);
                     document.getElementById('phoneDisplay').textContent = phone;
                     startCountdown();
-                    if (data.code_dev) {
-                        console.log('📱 Code de test (à des fins de développement) :', data.code_dev);
-                    }
                 } else {
                     showError(data.error || 'Erreur serveur');
                 }
@@ -582,8 +614,6 @@
         }
 
         function verifierCode() {
-            
-
             const inputs = document.querySelectorAll('.code-box');
             let code = '';
             inputs.forEach(input => code += input.value);
@@ -600,12 +630,8 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ telephone: currentPhone, code: code })
             })
-            .then(res => {
-                console.log('📥 Statut HTTP :', res.status);
-                return res.json();
-            })
+            .then(res => res.json())
             .then(data => {
-                console.log('📥 Réponse du serveur :', JSON.stringify(data));
                 if (data.success) {
                     document.getElementById('step2').classList.remove('active');
                     document.getElementById('step3').classList.add('active');
@@ -627,6 +653,7 @@
                     }, 2000);
                 } else {
                     showError(data.error || 'Code incorrect');
+                    const inputs = document.querySelectorAll('.code-box');
                     inputs.forEach(input => { input.value = ''; input.classList.remove('filled'); });
                     inputs[0].focus();
                 }
@@ -687,7 +714,10 @@
             .then(res => res.json())
             .then(data => {
                 if (data.success) {
+                    currentCode = data.code_dev || '';
+                    document.getElementById('receivedCode').value = currentCode;
                     startCountdown();
+                    showError('Nouveau code envoyé !');
                 } else {
                     showError(data.error || 'Erreur');
                 }
