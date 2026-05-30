@@ -416,19 +416,11 @@
                     <div class="profil-option" data-role="voyages"><i class="fas fa-plane"></i><span>Voyages</span></div>
                 </div>
 
-                <div class="demo-account-select mt-2">
-                    <label><i class="fas fa-users me-2"></i>Compte démo (jury) :</label>
-                    <select id="demoAccountSelect" class="form-select">
-                        <option value="">-- Choisissez un compte --</option>
-                        <option value="medecin|jean.dupont@chat.com|password123">Médecin – Dr. Jean Dupont</option>
-                        <option value="medecin|sophie.martin@chat.com|password123">Médecin – Dr. Sophie Martin</option>
-                        <option value="infirmier|khaled.benammar@chat.com|password123">Infirmier – Khaled Benammar</option>
-                        <option value="administratif|admin@chat.com|admin123">Admin – Principal</option>
-                        <option value="hotellerie|ali.toure@chat.com|password123">Hôtellerie – Ali Touré</option>
-                        <option value="logistique|moussa.diop@chat.com|password123">Logistique – Moussa Diop</option>
-                        <option value="qualite|aicha.diallo@chat.com|password123">Qualité – Aïcha Diallo</option>
-                        <option value="voyages|ousmane.sow@chat.com|password123">Voyages – Ousmane Sow</option>
-                    </select>
+                <div class="demo-account-select">
+                   <label><i class="fas fa-users me-2"></i>Compte de démonstration :</label>
+                   <select id="demoAccountSelect" class="form-select" onchange="fillDemoAccount()">
+                   <option value="">-- Chargement des comptes... --</option>
+                   </select>
                 </div>
 
                 <input type="text" id="username" class="form-control" placeholder="Email" value="admin@chat.com">
@@ -458,6 +450,57 @@
             this.classList.add('selected');
         });
     });
+
+    async function chargerComptesDemo() {
+    const token = localStorage.getItem('token');
+    if (!token) {
+        // Si pas de token, on utilise les comptes par défaut
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/personnel', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        
+        if (!response.ok) throw new Error('Erreur chargement');
+        
+        const personnel = await response.json();
+        const select = document.getElementById('demoAccountSelect');
+        
+        select.innerHTML = '<option value="">-- Choisissez un compte de démonstration --</option>';
+        
+        personnel.forEach(p => {
+            if (p.email && p.mot_de_passe) {
+                const option = document.createElement('option');
+                option.value = `${p.poste}|${p.email}|${p.mot_de_passe}`;
+                
+                // Traduction des postes pour l'affichage
+                let posteFr = p.poste;
+                switch(p.poste) {
+                    case 'medecin': posteFr = 'Médecin'; break;
+                    case 'infirmier': posteFr = 'Infirmier'; break;
+                    case 'administratif': posteFr = 'Administratif'; break;
+                    case 'hotellerie': posteFr = 'Hôtellerie'; break;
+                    case 'logistique': posteFr = 'Logistique'; break;
+                    case 'qualite': posteFr = 'Qualité'; break;
+                    case 'voyages': posteFr = 'Voyages'; break;
+                }
+                
+                option.textContent = `${posteFr} - ${p.prenom} ${p.nom} (${p.email})`;
+                select.appendChild(option);
+            }
+        });
+    } catch (error) {
+        console.error('Erreur chargement comptes:', error);
+        // En cas d'erreur, on garde les comptes par défaut
+    }
+}
+
+// Appeler la fonction après le chargement de la modale
+document.getElementById('loginModal').addEventListener('shown.bs.modal', function() {
+    chargerComptesDemo();
+});
 
     function getSelectedRole() {
         const selected = document.querySelector('.profil-option.selected');
