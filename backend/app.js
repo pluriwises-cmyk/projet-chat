@@ -102,7 +102,7 @@ const initDatabase = () => {
 
                 // Services
                 `INSERT OR IGNORE INTO service (nom, departement, description) VALUES
-                 ('Hospitalisation', 'medical', 'Service d\'hospitalisation'),
+                 ('Hospitalisation', 'medical', 'Service d''hospitalisation'),
                  ('Consultations', 'medical', 'Consultations généralistes et spécialisées'),
                  ('Rééducation', 'medical', 'Service de rééducation fonctionnelle'),
                  ('Apithérapie', 'medical', 'Traitements à base de miel'),
