@@ -251,6 +251,49 @@
             transform: translateY(-2px);
             box-shadow: 0 5px 20px rgba(102,126,234,0.4);
         }
+
+        .separator {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .separator::before,
+        .separator::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            width: 45%;
+            height: 1px;
+            background: #e0e0e0;
+        }
+
+        .separator::before {
+            left: 0;
+        }
+
+        .separator::after {
+            right: 0;
+        }
+
+        .separator span {
+            background: white;
+            padding: 0 10px;
+            color: #999;
+        }
+
+        .form-control, .form-select {
+            border-radius: 10px;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            margin-bottom: 15px;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: #667eea;
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+        }
     </style>
 </head>
 <body>
@@ -272,10 +315,10 @@
                 <li class="nav-item"><a class="nav-link" href="#footer">Contact</a></li>
                 <li class="nav-item">
                     <a class="nav-link" href="/help.html" target="_blank">
-            <i class="fas fa-question-circle me-1"></i> Aide
-        </a>
-    </li>
-    <li class="nav-item">
+                        <i class="fas fa-question-circle me-1"></i> Aide
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a class="nav-link btn-access" href="#" data-bs-toggle="modal" data-bs-target="#loginModal">
                         <i class="fas fa-lock me-2"></i>Espace Personnel
                     </a>
@@ -307,23 +350,23 @@
             <!-- CARTE VIDÉO CLIQUABLE -->
             <div class="col-lg-6" data-aos="fade-left">
                 <div class="video-card">
-    <a href="https://www.youtube.com/watch?v=ndMH5hfDx3Y" target="_blank" class="video-link text-decoration-none">
-        <div style="position: relative;">
-            <img src="/images/logo udlHHH.png" alt="Démonstration CHAT" style="width: 100%; border-radius: 25px;">
-            <div class="play-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.3s; border-radius: 25px;">
-                <div style="background: white; width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                    <i class="fas fa-play" style="font-size: 28px; color: #667eea; margin-left: 5px;"></i>
+                    <a href="https://www.youtube.com/watch?v=ndMH5hfDx3Y" target="_blank" class="video-link text-decoration-none">
+                        <div style="position: relative;">
+                            <img src="/images/logo udlHHH.png" alt="Démonstration CHAT" style="width: 100%; border-radius: 25px;">
+                            <div class="play-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.3); display: flex; align-items: center; justify-content: center; opacity: 0; transition: 0.3s; border-radius: 25px;">
+                                <div style="background: white; width: 70px; height: 70px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                    <i class="fas fa-play" style="font-size: 28px; color: #667eea; margin-left: 5px;"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </a>
+                    <div class="text-center mt-4">
+                        <a href="https://www.youtube.com/watch?v=LZ1Ik2K6Mbs" target="_blank" 
+                           class="btn btn-light rounded-pill px-5 py-3 fw-bold shadow">
+                            <i class="fab fa-youtube me-2"></i> Regarder la démo sur YouTube
+                        </a>
+                    </div>
                 </div>
-            </div>
-        </div>
-    </a>
-    <div class="text-center mt-4">
-        <a href="https://www.youtube.com/watch?v=LZ1Ik2K6Mbs" target="_blank" 
-           class="btn btn-light rounded-pill px-5 py-3 fw-bold shadow">
-            <i class="fab fa-youtube me-2"></i> Regarder la démo  sur YouTube
-        </a>
-    </div>
-</div>
             </div>
         </div>
     </div>
@@ -421,21 +464,24 @@
                     <div class="profil-option" data-role="voyages"><i class="fas fa-plane"></i><span>Voyages</span></div>
                 </div>
 
-               <div class="demo-account-select">
-    <label><i class="fas fa-users me-2"></i>Compte de démonstration :</label>
-    <select id="demoAccountSelect" class="form-select" onchange="fillDemoAccount()">
-        <option value="">-- Choisissez un compte --</option>
-        <option value="medecin|jean.dupont@chat.com|password123">👨‍⚕️ Médecin – Dr. Jamal Dellal</option>
-        <option value="medecin|sophie.martin@chat.com|password123">👩‍⚕️ Médecin – Dr. Sophie Martin</option>
-        <option value="infirmier|khaled.benammar@chat.com|password123">🩺 Infirmier – Khaled Benammar</option>
-        <option value="infirmier|fatima.zahra@chat.com|password123">🩺 Infirmière – Fatima Zahra</option>
-        <option value="administratif|admin@chat.com|admin123">📊 Administratif – Admin Principal</option>
-        <option value="hotellerie|ali.toure@chat.com|password123">🏨 Hôtellerie – Ali Touré</option>
-        <option value="logistique|moussa.diop@chat.com|password123">📦 Logistique – Moussa Diop</option>
-        <option value="qualite|aicha.diallo@chat.com|password123">⭐ Qualité – Aïcha Diallo</option>
-        <option value="voyages|ousmane.sow@chat.com|password123">✈️ Voyages – Ousmane Sow</option>
-    </select>
-</div>
+                <div class="demo-account-select">
+                    <label><i class="fas fa-users me-2"></i>Compte de démonstration :</label>
+                    <select id="demoAccountSelect" class="form-select" onchange="fillDemoAccount()">
+                        <option value="">-- Choisissez un compte --</option>
+                        <option value="medecin|jean.dupont@chat.com|password123">👨‍⚕️ Médecin – Dr. Jamal Dellal</option>
+                        <option value="medecin|dr.diallo@chat.com|password123">👨‍⚕️ Médecin – Dr. Imad Diallo</option>
+                        <option value="infirmier|khaled.benammar@chat.com|password123">🩺 Infirmier – Khaled Benammar</option>
+                        <option value="infirmier|fatima.zahra@chat.com|password123">🩺 Infirmière – Fatima Zahra</option>
+                        <option value="administratif|admin@chat.com|admin123">📊 Administratif – Admin Principal</option>
+                        <option value="hotellerie|ali.toure@chat.com|password123">🏨 Hôtellerie – Ali Touré</option>
+                        <option value="logistique|moussa.diop@chat.com|password123">📦 Logistique – Moussa Dali</option>
+                        <option value="qualite|aicha.diallo@chat.com|password123">⭐ Qualité – Aïcha Diafi</option>
+                        <option value="voyages|ousmane.sow@chat.com|password123">✈️ Voyages – Ousmane Sowane</option>
+                        <option value="chauffeur|pape.ndiaye@chat.com|password123">🚗 Chauffeur – Pape Ndiaye</option>
+                        <option value="direction|aminata.fall@chat.com|password123">📊 Direction – Aminata Fall</option>
+                        <option value="boss|mohamed.boumesjed@chat.com|password123">👑 Boss – Mohamed Boumesjed</option>
+                    </select>
+                </div>
 
                 <input type="text" id="username" class="form-control" placeholder="Email" value="admin@chat.com">
                 <input type="password" id="password" class="form-control" placeholder="Mot de passe" value="admin123">
@@ -464,57 +510,6 @@
             this.classList.add('selected');
         });
     });
-
-    async function chargerComptesDemo() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        // Si pas de token, on utilise les comptes par défaut
-        return;
-    }
-    
-    try {
-        const response = await fetch('/api/personnel', {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        
-        if (!response.ok) throw new Error('Erreur chargement');
-        
-        const personnel = await response.json();
-        const select = document.getElementById('demoAccountSelect');
-        
-        select.innerHTML = '<option value="">-- Choisissez un compte de démonstration --</option>';
-        
-        personnel.forEach(p => {
-            if (p.email && p.mot_de_passe) {
-                const option = document.createElement('option');
-                option.value = `${p.poste}|${p.email}|${p.mot_de_passe}`;
-                
-                // Traduction des postes pour l'affichage
-                let posteFr = p.poste;
-                switch(p.poste) {
-                    case 'medecin': posteFr = 'Médecin'; break;
-                    case 'infirmier': posteFr = 'Infirmier'; break;
-                    case 'administratif': posteFr = 'Administratif'; break;
-                    case 'hotellerie': posteFr = 'Hôtellerie'; break;
-                    case 'logistique': posteFr = 'Logistique'; break;
-                    case 'qualite': posteFr = 'Qualité'; break;
-                    case 'voyages': posteFr = 'Voyages'; break;
-                }
-                
-                option.textContent = `${posteFr} - ${p.prenom} ${p.nom} (${p.email})`;
-                select.appendChild(option);
-            }
-        });
-    } catch (error) {
-        console.error('Erreur chargement comptes:', error);
-        // En cas d'erreur, on garde les comptes par défaut
-    }
-}
-
-// Appeler la fonction après le chargement de la modale
-document.getElementById('loginModal').addEventListener('shown.bs.modal', function() {
-    chargerComptesDemo();
-});
 
     function getSelectedRole() {
         const selected = document.querySelector('.profil-option.selected');
@@ -550,13 +545,21 @@ document.getElementById('loginModal').addEventListener('shown.bs.modal', functio
             if (res.ok) {
                 localStorage.setItem('token', data.token);
                 const redirections = {
-                    medecin: 'dashboard-medecin.html', infirmier: 'dashboard-infirmier.html',
-                    direction: 'dashboard-direction.html', administratif: 'dashboard-admin.html',
-                    hotellerie: 'hotellerie.html', logistique: 'stocks.html',
-                    qualite: 'qualite.html', voyages: 'voyages.html'
+                    medecin: 'dashboard-medecin.html',
+                    infirmier: 'dashboard-infirmier.html',
+                    direction: 'dashboard-direction.html',
+                    administratif: 'dashboard-admin.html',
+                    hotellerie: 'hotellerie.html',
+                    logistique: 'stocks.html',
+                    qualite: 'qualite.html',
+                    voyages: 'voyages.html',
+                    chauffeur: 'dashboard-chauffeur.html',
+                    boss: 'dashboard-boss.html'
                 };
-                window.location.href = redirections[role];
-            } else alert('Erreur : ' + (data.error || 'Identifiants incorrects'));
+                window.location.href = redirections[role] || 'dashboard-patient.html';
+            } else {
+                alert('Erreur : ' + (data.error || 'Identifiants incorrects'));
+            }
         } catch (err) {
             alert('Erreur serveur');
         }
