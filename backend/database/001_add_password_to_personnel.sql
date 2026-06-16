@@ -22,7 +22,7 @@ ALTER TABLE personnel ADD COLUMN mot_de_passe TEXT;
 
 -- MÉDECIN (Dr. Jean Dupont)
 INSERT INTO personnel (nom, prenom, poste, email, telephone, mot_de_passe, statut) 
-VALUES ('zarguennif', 'kada', 'medecin', 'jean.dupont@chat.com', '0612345601', 'password123', 'actif');
+VALUES ('Dellal', 'Jamal', 'medecin', 'jean.dupont@chat.com', '0612345601', 'password123', 'actif');
 
 -- MÉDECIN 2 (Dr. Sophie Martin)
 INSERT INTO personnel (nom, prenom, poste, email, telephone, mot_de_passe, statut) 
