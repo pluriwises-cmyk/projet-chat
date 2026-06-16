@@ -1,0 +1,327 @@
+-- ============================================================
+-- 1. SUPPRESSION DES DONNÉES EXISTANTES (tables principales)
+-- ============================================================
+DELETE FROM personnel;
+DELETE FROM beneficiaire;
+DELETE FROM consultation;
+DELETE FROM prescription;
+DELETE FROM messages;
+DELETE FROM projets;
+DELETE FROM chambre;
+DELETE FROM course;
+DELETE FROM constante;
+DELETE FROM soins;
+DELETE FROM hospitalisation;
+DELETE FROM rendez_vous;
+DELETE FROM facture;
+DELETE FROM vehicule;
+DELETE FROM specialiste;
+DELETE FROM dossier_medical;
+DELETE FROM commande_restauration;
+DELETE FROM whatsapp_validation;
+DELETE FROM medicaments;
+DELETE FROM planning;
+DELETE FROM indicateur_qualite;
+DELETE FROM produit;
+DELETE FROM fournisseur;
+DELETE FROM parametre;
+DELETE FROM rapport;
+DELETE FROM service;
+DELETE FROM tokens;
+DELETE FROM documents;
+DELETE FROM authentification;
+DELETE FROM logs_connexion;
+DELETE FROM admission;
+DELETE FROM mouvement_stock;
+
+-- ============================================================
+-- 2. INJECTION DES PROFILS PERSONNEL (12)
+-- ============================================================
+INSERT INTO personnel (nom, prenom, poste, email, telephone, mot_de_passe, statut) VALUES
+('Dellal', 'Jamal', 'medecin', 'jean.dupont@chat.com', '0612345601', 'password123', 'actif'),
+('Diallo', 'Imad', 'medecin', 'dr.diallo@chat.com', '771234444', 'password123', 'actif'),
+('Benammar', 'Khaled', 'infirmier', 'khaled.benammar@chat.com', '0612345610', 'password123', 'actif'),
+('Zahra', 'Fatima', 'infirmier', 'fatima.zahra@chat.com', '0612345611', 'password123', 'actif'),
+('Admin', 'Principal', 'administratif', 'admin@chat.com', '0612345620', 'admin123', 'actif'),
+('Touré', 'Ali', 'hotellerie', 'ali.toure@chat.com', '0612345630', 'password123', 'actif'),
+('Dali', 'Moussa', 'logistique', 'moussa.diop@chat.com', '0612345640', 'password123', 'actif'),
+('Diafi', 'Aïcha', 'qualite', 'aicha.diallo@chat.com', '0612345650', 'password123', 'actif'),
+('Sowane', 'Ousmane', 'voyages', 'ousmane.sow@chat.com', '0612345660', 'password123', 'actif'),
+('Ndiaye', 'Pape', 'chauffeur', 'pape.ndiaye@chat.com', '771234569', 'password123', 'actif'),
+('Fall', 'Aminata', 'direction', 'aminata.fall@chat.com', '771234570', 'password123', 'actif'),
+('Boumesjed', 'Mohamed', 'boss', 'mohamed.boumesjed@chat.com', '771234571', 'password123', 'actif');
+
+-- ============================================================
+-- 3. INJECTION DES BÉNÉFICIAIRES (7)
+-- ============================================================
+INSERT INTO beneficiaire (nom, prenom, type, telephone, whatsapp, email, statut) VALUES
+('Derbel', 'Hamidou', 'patient', '771234567', '771234567', 'hamidou.derbel@chat.com', 'actif'),
+('Fillali', 'Amina', 'touriste', '781234567', '781234567', 'amina.fillali@chat.com', 'actif'),
+('Sowali', 'Oumar', 'mixte', '761234567', '761234567', 'oumar.sowali@chat.com', 'actif'),
+('Benchaa', 'Mustapha', 'patient', '55555555', '55555555', 'mustapha.benchaa@chat.com', 'actif'),
+('Sarnou', 'Yacine', 'patient', '666666666', '666666666', 'yacine.sarnou@chat.com', 'actif'),
+('Mansour', 'Houari', 'patient', '3399902100', '3399902100', 'houari.mansour@chat.com', 'actif'),
+('Boudouma', 'Saleh', 'patient', '60606060', '60606060', 'saleh.boudouma@chat.com', 'actif');
+
+-- ============================================================
+-- 4. SERVICES
+-- ============================================================
+INSERT INTO service (id_service, nom, departement, description) VALUES
+(1, 'Hospitalisation', 'medical', 'Service d''hospitalisation'),
+(2, 'Consultations', 'medical', 'Consultations généralistes et spécialisées'),
+(3, 'Rééducation', 'medical', 'Service de rééducation fonctionnelle'),
+(4, 'Apithérapie', 'medical', 'Traitements à base de miel et produits de la ruche'),
+(5, 'Réception Hôtel', 'hotellerie', 'Accueil des touristes et gestion des réservations'),
+(6, 'Étages', 'hotellerie', 'Gestion des étages et des chambres'),
+(7, 'Restauration', 'hotellerie', 'Restauration collective et à la carte'),
+(8, 'Agence Voyages', 'hotellerie', 'Organisation des courses et des transferts'),
+(9, 'RH', 'gestion', 'Ressources humaines'),
+(10, 'Comptabilité', 'gestion', 'Gestion financière et comptable'),
+(11, 'Moyens Généraux', 'gestion', 'Maintenance, logistique, lingerie'),
+(12, 'Informatique', 'gestion', 'Systèmes d’information et support technique'),
+(13, 'Direction', 'direction', 'Direction générale de l’établissement');
+
+-- ============================================================
+-- 5. PARAMÈTRES
+-- ============================================================
+INSERT INTO parametre (cle, valeur, description) VALUES
+('nom_etablissement', 'Clinique Hôtelière et Actions Touristiques (CHAT)', 'Nom officiel'),
+('adresse', 'UDL SBA, ALGERIE', 'Adresse complète'),
+('telephone', '+213 773 460 284', 'Téléphone standard'),
+('langue', 'Arabe,Anglais,Français', 'Langues disponibles'),
+('fuseau_horaire', 'GMT+1', 'Fuseau horaire');
+
+-- ============================================================
+-- 6. CHAMBRES
+-- ============================================================
+INSERT INTO chambre (numero, type, capacite, statut) VALUES
+('101', 'standard', 2, 'libre'),
+('102', 'standard', 2, 'libre'),
+('201', 'medicalisee', 1, 'libre'),
+('202', 'medicalisee', 1, 'libre'),
+('301', 'suite', 2, 'libre'),
+('103', 'medicalisee', 1, 'occupee'),
+('104', 'standard', 1, 'libre'),
+('110', 'standard', 2, 'libre');
+
+-- ============================================================
+-- 7. VÉHICULES
+-- ============================================================
+INSERT INTO vehicule (immatriculation, type, etat) VALUES
+('AMB-001', 'ambulance', 'disponible'),
+('MB-002', 'minibus', 'disponible'),
+('AB-123-CD', 'ambulance', 'disponible'),
+('EF-456-GH', 'ambulance', 'en_course'),
+('IJ-789-KL', 'voiture', 'disponible'),
+('MN-012-OP', 'minibus', 'maintenance');
+
+-- ============================================================
+-- 8. CHAMBRES (suite)
+-- ============================================================
+INSERT INTO commande_restauration (id_beneficiaire, type_service, regime, instructions, statut) VALUES
+(1, 'hospitalisation', 'Sans sel', NULL, 'en_cuisine'),
+(2, 'salle', NULL, NULL, 'pret'),
+(1, 'hospitalisation', NULL, NULL, 'en_cuisine'),
+(2, 'salle', NULL, NULL, 'pret'),
+(4, 'hospitalisation', 'sans sel', 'pas trop chaud, pas trop froid', 'en_cuisine');
+
+-- ============================================================
+-- 9. DOSSIERS MÉDICAUX
+-- ============================================================
+INSERT INTO dossier_medical (id_beneficiaire, groupe_sanguin, allergies, antecedents, traitements_en_cours, medecin_traitant) VALUES
+(1, 'A+', 'Pénicilline', 'Hypertension', 'Amlodipine 5mg', 'Dr. Diallo'),
+(2, 'O-', 'Aucune', 'Asthme', 'Ventoline', 'Dr. Fall'),
+(3, 'B+', 'Arachides', 'Diabète type 2', 'Metformine', 'Dr. Diallo');
+
+-- ============================================================
+-- 10. CONSTANTES
+-- ============================================================
+INSERT INTO constantes (id_beneficiaire, tension, pouls, temperature, saturation, chambre) VALUES
+(1, '140/90', 88, 38.5, 96, '305'),
+(2, '120/75', 72, 37.2, 98, '210'),
+(3, '135/85', 76, 36.8, 97, '412'),
+(4, '120/80', 145, 38.0, 25, NULL);
+
+-- ============================================================
+-- 11. CONSULTATIONS
+-- ============================================================
+INSERT INTO consultation (id_beneficiaire, id_medecin, date_heure, type, motif, statut) VALUES
+(1, 1, '2025-04-15 09:00:00', 'presentiel', 'Douleurs lombaires', 'planifiee'),
+(2, 2, '2025-04-16 10:30:00', 'teleconsultation', 'Conseils voyage', 'planifiee'),
+(3, 1, '2026-03-27 16:39:00', 'presentiel', 'Contrôle', 'planifiee'),
+(1, 1, '2026-04-29 19:17:38', 'presentiel', 'Douleurs thoraciques', 'realisee'),
+(2, 1, '2026-04-30 19:17:38', 'teleconsultation', 'Suivi tension', 'realisee'),
+(3, 1, '2026-05-02 19:17:38', 'presentiel', 'Contrôle annuel', 'planifiee'),
+(10, 1, '2026-05-31 03:00:00', 'presentiel', 'Contrôle', 'planifiee'),
+(1, 1, '2026-05-28 10:00:00', 'teleconsultation', 'Orient', 'planifiee');
+
+-- ============================================================
+-- 12. PRESCRIPTIONS
+-- ============================================================
+INSERT INTO prescription (id_beneficiaire, medicament, posologie, statut) VALUES
+(1, 'Amoxicilline 500mg', '1 comprimé 3x/jour', 'en_cours'),
+(2, 'Paracétamol 1000mg', '1 comprimé si douleur', 'termine'),
+(3, 'Metformine 500mg', '2 comprimés/jour', 'en_cours'),
+(1, 'Solimédrole + Nifluril', 'comprimé matin et soir', 'en_cours'),
+(4, 'Maxilaze + Madecassol', 'une cuillère + 2 applications', 'en_cours'),
+(3, 'Madecassol', '3 applications/jour', 'en_cours');
+
+-- ============================================================
+-- 13. SOINS
+-- ============================================================
+INSERT INTO soins (id_beneficiaire, type_soin, statut, urgent) VALUES
+(1, 'Pansement', 'programme', 1),
+(2, 'Injection insuline', 'programme', 0),
+(3, 'Rééducation', 'programme', 0),
+(4, 'Pansement', 'programme', 1);
+
+-- ============================================================
+-- 14. MESSAGES
+-- ============================================================
+INSERT INTO messages (id_beneficiaire, id_medecin, sujet, contenu, statut) VALUES
+(1, 1, 'Résultats d''analyse', 'Vos résultats d''analyse sont disponibles.', 'non_lu'),
+(1, 1, 'Rappel rendez-vous', 'Rendez-vous prévu le 25/03/2026 à 09h30.', 'lu'),
+(1, NULL, 'Facture disponible', 'Votre facture de mars est disponible.', 'lu');
+
+-- ============================================================
+-- 15. RENDEZ-VOUS
+-- ============================================================
+INSERT INTO rendez_vous (id_beneficiaire, date_rdv, motif, statut, id_medecin) VALUES
+(1, '2026-03-15 09:30:00', 'Consultation cardiologie', 'confirmé', 1),
+(2, '2026-03-16 10:15:00', 'Suivi pédiatrie', 'en attente', 2),
+(3, '2026-03-17 11:00:00', 'Contrôle chirurgical', 'confirmé', 1),
+(1, '2026-03-29 15:51:00', 'Douleurs', 'planifie', 1),
+(1, '2026-04-11 16:02:00', 'Échographie', 'planifie', 5),
+(4, '2026-10-30 21:13:00', 'Contrôle + intervention', 'planifie', 5),
+(13, '2026-06-18 11:00:00', 'Bilan annuel', 'planifie', 5);
+
+-- ============================================================
+-- 16. PROJETS
+-- ============================================================
+INSERT INTO projets (nom, description, budget, avancement, statut) VALUES
+('Nouveau bloc opératoire', 'Extension avec 3 salles', 250000000, 74, 'en_cours'),
+('Application mobile patients', 'Prise de RDV et suivi', 15000000, 63, 'en_cours'),
+('Rénovation urgences', 'Modernisation du service', 85000000, 0, 'planifie'),
+('Extension salle chirurgicale', 'Profiter de l''espace', 1400000, 0, 'planifie');
+
+-- ============================================================
+-- 17. COURSES
+-- ============================================================
+INSERT INTO course (id_vehicule, id_chauffeur, id_beneficiaire, date_depart, lieu_depart, destination, type, statut) VALUES
+(1, 1, 1, '2026-03-14 09:30:00', 'Hôpital', 'Radiologie', 'sanitaire', 'terminee'),
+(2, 2, 2, '2026-03-14 10:15:00', 'Ch. 305', 'Bloc', 'sanitaire', 'en_cours'),
+(3, 3, 3, '2026-03-14 11:00:00', 'Urgences', 'Cardio', 'sanitaire', 'planifiee'),
+(1, 3, 1, '2026-05-03 20:27:43', 'CHAT', 'Domicile patient', 'sanitaire', 'planifiee'),
+(1, 7, 2, '2026-05-03 21:39:10', 'Domicile patient A', 'CHAT', 'sanitaire', 'planifiee');
+
+-- ============================================================
+-- 18. FACTURES
+-- ============================================================
+INSERT INTO facture (id_beneficiaire, montant_ttc, statut) VALUES
+(1, 49500, 'impayee'),
+(2, 27500, 'emise'),
+(3, 137500, 'impayee');
+
+-- ============================================================
+-- 19. SPECIALISTES
+-- ============================================================
+INSERT INTO specialiste (id_personnel, specialite, photo_url, cv_url, description) VALUES
+(1, 'Cardiologue', '/images/cardiologue.jpg', '/cvs/dr_faye.pdf', 'Spécialiste en cardiologie interventionnelle, 15 ans d''expérience.'),
+(2, 'Pédiatre', '/images/pediatre.jpg', '/cvs/dr_ndiaye.pdf', 'Pédiatre depuis 10 ans, passionné par la santé des enfants.'),
+(3, 'Chirurgien', '/images/chirurgien.jpg', '/cvs/dr_diouf.pdf', 'Chirurgien généraliste, spécialisé en laparoscopie.');
+
+-- ============================================================
+-- 20. INDICATEURS QUALITÉ
+-- ============================================================
+INSERT INTO indicateur_qualite (nom, valeur, service, tendance) VALUES
+('Satisfaction patient', 4.5, 'Hospitalisation', 'stable'),
+('Satisfaction patient', 3.2, 'Restauration', 'stable'),
+('Satisfaction patient', 4.8, 'Accueil', 'stable'),
+('Temps attente', 2.1, 'Consultations', 'stable'),
+('Temps attente', 4.0, 'Urgences', 'stable'),
+('Satisfaction patients', '92%', NULL, 'stable'),
+('Respect des protocoles', '98%', NULL, 'stable'),
+('Délai d''attente moyen', '15 min', NULL, 'stable'),
+('Taux d''infection', '1.2%', NULL, 'stable');
+
+-- ============================================================
+-- 21. PRODUITS (stocks)
+-- ============================================================
+INSERT INTO produit (nom, type, stock_actuel, seuil_alerte) VALUES
+('Paracétamol 500mg', 'medicament', 150, 50),
+('Miel bio', 'apitherapie', 20, 10),
+('Draps blancs', 'linge', 200, 50),
+('Gants stériles M', 'fourniture', 1250, 500),
+('Bétadine', 'medicament', 12, 30),
+('Seringues 5ml', 'fourniture', 850, 300);
+
+-- ============================================================
+-- 22. RAPPORTS
+-- ============================================================
+INSERT INTO rapport (nom, periode, taille, url) VALUES
+('Activité médicale', 'Mars 2026', '2.4 Mo', '/rapports/activite.pdf'),
+('Rapport financier', 'Mars 2026', '1.8 Mo', '/rapports/financier.pdf'),
+('Indicateurs qualité', 'Mars 2026', '0.5 Mo', '/rapports/qualite.pdf'),
+('Présences personnel', 'Mars 2026', '0.9 Mo', '/rapports/personnel.pdf');
+
+-- ============================================================
+-- 23. HOSPITALISATION
+-- ============================================================
+INSERT INTO hospitalisation (id_beneficiaire, id_chambre, id_medecin, id_infirmier, date_admission, motif, statut) VALUES
+(1, 3, 1, NULL, '2025-04-10 14:30:00', 'Observation post-opératoire', 'en_cours');
+
+-- ============================================================
+-- 24. ADMISSIONS
+-- ============================================================
+INSERT INTO admissions (id_beneficiaire, service, medecin, statut) VALUES
+(1, 'Cardiologie', 'Dr. Diallo', 'en_cours'),
+(2, 'Urgences', 'Dr. Fall', 'termine'),
+(3, 'Chirurgie', 'Dr. Ba', 'en_attente'),
+(3, 'chirrurgie', '1', 'en_cours'),
+(7, 'chirrurgie', '2', 'en_cours');
+
+-- ============================================================
+-- 25. MÉDICAMENTS (distribution)
+-- ============================================================
+INSERT INTO medicaments (id_beneficiaire, medicament, posologie, horaire, statut) VALUES
+(1, 'Amoxicilline 500mg', '1 comprimé 3x/jour', '08:00', 'a_donner'),
+(2, 'Paracétamol 1000mg', '1 comprimé si douleur', '10:00', 'donne'),
+(3, 'Héparine', 'Injection', '12:00', 'a_donner'),
+(4, 'Sulpirid', 'un comprimé', '18:00', 'a_donner');
+
+-- ============================================================
+-- 26. PLANNING
+-- ============================================================
+INSERT INTO planning (id_personnel, date, heure_debut, heure_fin, affectation) VALUES
+(1, '2026-03-16', '08:00', '16:00', 'Soins intensifs'),
+(2, '2026-03-16', '14:00', '22:00', 'Urgences');
+
+-- ============================================================
+-- 27. LOGS (simulation)
+-- ============================================================
+INSERT INTO logs_connexion (id_utilisateur, type_utilisateur, action, ip) VALUES
+(1, 'personnel', 'Connexion', '192.168.1.1'),
+(2, 'personnel', 'Déconnexion', '192.168.1.2');
+
+-- ============================================================
+-- 28. WHATSAPP VALIDATION (pour bénéficiaires)
+-- ============================================================
+INSERT INTO whatsapp_validation (telephone, code, statut, date_expiration) VALUES
+('771234567', '123456', 'valide', datetime('now', '+2 minutes')),
+('781234567', '654321', 'valide', datetime('now', '+2 minutes'));
+
+-- ============================================================
+-- 29. FOURNISSEURS
+-- ============================================================
+INSERT INTO fournisseur (nom, type, contact) VALUES
+('Pharmacie Centrale', 'medical', 'M. Diallo'),
+('Apiculteurs du Sahel', 'apicole', 'Mme Diarra');
+
+-- ============================================================
+-- 30. VÉRIFICATION FINALE
+-- ============================================================
+SELECT '✅ Personnel : ' || COUNT(*) || ' lignes' FROM personnel;
+SELECT '✅ Bénéficiaires : ' || COUNT(*) || ' lignes' FROM beneficiaire;
+SELECT '✅ Consultations : ' || COUNT(*) || ' lignes' FROM consultation;
+SELECT '✅ Prescriptions : ' || COUNT(*) || ' lignes' FROM prescription;
+SELECT '✅ Projets : ' || COUNT(*) || ' lignes' FROM projets;
