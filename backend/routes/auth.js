@@ -120,5 +120,34 @@ router.post('/check-phone', (req, res) => {
         });
     });
 });
+router.post('/check-phone', (req, res) => {
+    const { telephone } = req.body;
+
+    if (!telephone) return res.status(400).json({ error: 'Numéro requis' });
+
+    // 1. Chercher dans PERSONNEL (avec la colonne 'poste')
+    const sqlPersonnel = "SELECT poste FROM personnel WHERE telephone = ?";
+    
+    db.get(sqlPersonnel, [telephone], (err, user) => {
+        if (err) return res.status(500).json({ error: 'Erreur serveur' });
+
+        if (user) {
+            // Le serveur renvoie le rôle EXACT trouvé dans la colonne 'poste'
+            return res.json({ found: true, type: 'personnel', role: user.poste });
+        } 
+        
+        // 2. Chercher dans BENEFICIAIRE
+        const sqlBeneficiaire = "SELECT id_beneficiaire FROM beneficiaire WHERE telephone = ?";
+        db.get(sqlBeneficiaire, [telephone], (err, benef) => {
+            if (err) return res.status(500).json({ error: 'Erreur serveur' });
+            
+            if (benef) {
+                return res.json({ found: true, type: 'patient' });
+            } else {
+                return res.json({ found: false });
+            }
+        });
+    });
+});
 
 module.exports = router;
