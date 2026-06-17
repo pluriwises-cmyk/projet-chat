@@ -84,5 +84,37 @@ router.get('/seed', (req, res) => {
     // Tu peux garder cette route si elle est encore utilisée
     res.json({ message: 'Seed route' });
 });
+// AJOUTE CE CODE DANS TON FICHIER auth.js
+router.post('/check-phone', (req, res) => {
+    const { telephone } = req.body;
+
+    if (!telephone) {
+        return res.status(400).json({ error: 'Numéro de téléphone requis' });
+    }
+
+    // On vérifie d'abord dans la table 'personnel'
+    const sqlPersonnel = "SELECT id_personnel, poste FROM personnel WHERE telephone = ?";
+    
+    db.get(sqlPersonnel, [telephone], (err, user) => {
+        if (err) return res.status(500).json({ error: 'Erreur serveur' });
+
+        if (user) {
+            // C'est un personnel
+            return res.json({ found: true, type: 'personnel', role: user.poste });
+        } else {
+            // Si pas trouvé, on cherche dans la table 'patients' (ou autre)
+            const sqlPatient = "SELECT id_patient FROM patients WHERE telephone = ?";
+            db.get(sqlPatient, [telephone], (err, patient) => {
+                if (err) return res.status(500).json({ error: 'Erreur serveur' });
+                
+                if (patient) {
+                    return res.json({ found: true, type: 'patient' });
+                } else {
+                    return res.json({ found: false });
+                }
+            });
+        }
+    });
+});
 
 module.exports = router;
