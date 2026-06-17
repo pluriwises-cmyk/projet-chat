@@ -204,6 +204,36 @@ app.get('/api/consultations/medecin/:id', (req, res) => {
         }
     });
 });
+app.get('/api/stats/medecin/:id', (req, res) => {
+    const id = req.params.id;
+
+    db.get(`SELECT COUNT(*) as consultations_jour FROM consultation WHERE id_medecin = ? AND date(date_heure) = date('now')`, [id], (err, cons) => {
+        if (err) {
+            return res.status(500).json({ error: err.message });
+        }
+        db.get(`SELECT COUNT(DISTINCT id_beneficiaire) as patients_total FROM consultation WHERE id_medecin = ?`, [id], (err, pat) => {
+            if (err) {
+                return res.status(500).json({ error: err.message });
+            }
+            db.get(`SELECT COUNT(*) as rdv_jour FROM rendez_vous WHERE id_medecin = ? AND date(date_rdv) = date('now')`, [id], (err, rdvJ) => {
+                if (err) {
+                    return res.status(500).json({ error: err.message });
+                }
+                db.get(`SELECT COUNT(*) as rdv_attente FROM rendez_vous WHERE id_medecin = ? AND statut = 'en_attente'`, [id], (err, rdvA) => {
+                    if (err) {
+                        return res.status(500).json({ error: err.message });
+                    }
+                    res.json({
+                        consultations_jour: cons ? cons.consultations_jour : 0,
+                        patients_total: pat ? pat.patients_total : 0,
+                        rdv_jour: rdvJ ? rdvJ.rdv_jour : 0,
+                        rdv_attente: rdvA ? rdvA.rdv_attente : 0
+                    });
+                });
+            });
+        });
+    });
+});
 
 // ==================== DÉMARRAGE ====================
 app.listen(PORT, '0.0.0.0', () => {
