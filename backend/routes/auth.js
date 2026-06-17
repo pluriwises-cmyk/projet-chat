@@ -92,28 +92,32 @@ router.post('/check-phone', (req, res) => {
         return res.status(400).json({ error: 'Numéro de téléphone requis' });
     }
 
-    // On vérifie d'abord dans la table 'personnel'
+    // 1. On cherche d'abord dans le PERSONNEL
     const sqlPersonnel = "SELECT id_personnel, poste FROM personnel WHERE telephone = ?";
     
     db.get(sqlPersonnel, [telephone], (err, user) => {
         if (err) return res.status(500).json({ error: 'Erreur serveur' });
 
         if (user) {
-            // C'est un personnel
+            // C'est un personnel, on renvoie son rôle
             return res.json({ found: true, type: 'personnel', role: user.poste });
-        } else {
-            // Si pas trouvé, on cherche dans la table 'patients' (ou autre)
-            const sqlPatient = "SELECT id_patient FROM patients WHERE telephone = ?";
-            db.get(sqlPatient, [telephone], (err, patient) => {
-                if (err) return res.status(500).json({ error: 'Erreur serveur' });
-                
-                if (patient) {
-                    return res.json({ found: true, type: 'patient' });
-                } else {
-                    return res.json({ found: false });
-                }
-            });
-        }
+        } 
+        
+        // 2. Si pas trouvé, on cherche dans la table BENEFICIAIRE
+        // Utilisation de ta table correcte : "beneficiaire"
+        const sqlBeneficiaire = "SELECT id_beneficiaire FROM beneficiaire WHERE telephone = ?";
+        
+        db.get(sqlBeneficiaire, [telephone], (err, benef) => {
+            if (err) return res.status(500).json({ error: 'Erreur serveur' });
+            
+            if (benef) {
+                // C'est un bénéficiaire (patient/touriste...)
+                return res.json({ found: true, type: 'patient' });
+            } else {
+                // Inconnu au bataillon
+                return res.json({ found: false });
+            }
+        });
     });
 });
 
