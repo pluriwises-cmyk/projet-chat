@@ -183,6 +183,16 @@ app.get('/api/test', (req, res) => {
         }
     });
 });
+app.get('/api/test-consultations/:id', (req, res) => {
+    const id = req.params.id;
+    db.all(`SELECT * FROM consultation WHERE id_medecin = ?`, [id], (err, rows) => {
+        if (err) {
+            res.json({ error: err.message });
+        } else {
+            res.json({ consultations: rows });
+        }
+    });
+});
 
 // ==================== DÉMARRAGE ====================
 app.listen(PORT, '0.0.0.0', () => {
