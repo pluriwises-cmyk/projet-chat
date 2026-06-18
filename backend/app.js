@@ -13,70 +13,21 @@ app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Dossier statique (frontend)
+// Dossier statique
 app.use(express.static(path.join(__dirname, '../frontend')));
-console.log('📁 Dossier frontend servi:', path.join(__dirname, '../frontend'));
 
-// ===== INITIALISATION AUTOMATIQUE DE LA BASE =====
+// ===== INITIALISATION =====
 const initDatabase = () => {
     console.log('🔄 Initialisation de la base...');
-    
-    // 1. Ajouter la colonne mot_de_passe si elle n'existe pas
+    // Ajout colonne si absente
     db.run(`ALTER TABLE personnel ADD COLUMN mot_de_passe TEXT`, (err) => {
-        if (err) {
-            if (err.message.includes('duplicate column name')) {
-                console.log('✅ Colonne mot_de_passe existe déjà');
-            } else {
-                console.log('⚠️ Erreur lors de l\'ajout de la colonne:', err.message);
-            }
-        } else {
-            console.log('✅ Colonne mot_de_passe ajoutée avec succès');
-        }
-        
-        // 2. Injection des comptes personnel (démo) – UNIQUEMENT CEUX-CI
-        const users = [
-            ['Dellal', 'Jamal', 'medecin', 'jean.dupont@chat.com', '0612345601', 'password123', 'actif'],
-            ['Diallo', 'Imad', 'medecin', 'dr.diallo@chat.com', '771234444', 'password123', 'actif'],
-            ['Benammar', 'Khaled', 'infirmier', 'khaled.benammar@chat.com', '0612345610', 'password123', 'actif'],
-            ['Zahra', 'Fatima', 'infirmier', 'fatima.zahra@chat.com', '0612345611', 'password123', 'actif'],
-            ['Admin', 'Principal', 'administratif', 'admin@chat.com', '0612345620', 'admin123', 'actif'],
-            ['Touré', 'Ali', 'hotellerie', 'ali.toure@chat.com', '0612345630', 'password123', 'actif'],
-            ['Dali', 'Moussa', 'logistique', 'moussa.diop@chat.com', '0612345640', 'password123', 'actif'],
-            ['Diafi', 'Aïcha', 'qualite', 'aicha.diallo@chat.com', '0612345650', 'password123', 'actif'],
-            ['Sowane', 'Ousmane', 'voyages', 'ousmane.sow@chat.com', '0612345660', 'password123', 'actif'],
-            ['Ndiaye', 'Pape', 'chauffeur', 'pape.ndiaye@chat.com', '771234569', 'password123', 'actif'],
-            ['Fall', 'Aminata', 'direction', 'aminata.fall@chat.com', '771234570', 'password123', 'actif'],
-            ['Boumesjed', 'Mohamed', 'boss', 'mohamed.boumesjed@chat.com', '771234571', 'password123', 'actif']
-        ];
-
-        let completed = 0;
-        users.forEach(user => {
-            const sql = `INSERT OR IGNORE INTO personnel (nom, prenom, poste, email, telephone, mot_de_passe, statut) 
-                         VALUES (?, ?, ?, ?, ?, ?, ?)`;
-            db.run(sql, user, (err) => {
-                if (err) {
-                    console.error(`❌ Erreur insertion ${user[1]} ${user[0]}:`, err.message);
-                }
-                completed++;
-                if (completed === users.length) {
-                    console.log('✅ Comptes personnel injectés (12 profils)');
-                }
-            });
-        });
-
-        // ==== SUPPRESSION DE LA RÉINITIALISATION DES BÉNÉFICIAIRES ====
-        // Plus d'insertion de bénéficiaires de test, les données existantes sont conservées.
-        console.log('✅ Initialisation terminée (sans écrasement des bénéficiaires)');
+        console.log('✅ Vérification/Ajout colonne mot_de_passe terminée.');
     });
 };
 
-// Exécuter l'initialisation APRÈS la connexion à la base
-setTimeout(() => {
-    initDatabase();
-}, 2000);
-// ===== FIN INITIALISATION =====
+setTimeout(initDatabase, 2000);
 
-// ==================== ROUTES API ====================
+// ===== ROUTES API =====
 app.use('/api/beneficiaires', require('./routes/beneficiaires'));
 app.use('/api/consultations', require('./routes/consultations'));
 app.use('/api/prescriptions', require('./routes/prescriptions'));
@@ -107,53 +58,29 @@ app.use('/api/documents', require('./routes/documents'));
 app.use('/api/stats', require('./routes/stats'));
 app.use('/api/auth', authRoutes);
 
-// ==================== TEST ====================
-app.get('/api/test', (req, res) => {
-    db.get('SELECT COUNT(*) as count FROM beneficiaire', [], (err, row) => {
-        if (err) {
-            res.json({ error: err.message });
-        } else {
-            res.json({ message: 'Base connectée', beneficiaires: row.count });
-        }
-    });
-});
-
-// ==================== ROUTES POUR MÉDECIN ====================
-app.get('/api/consultations/medecin/:id', (req, res) => {
-    const id = req.params.id;
-    db.all(`SELECT * FROM consultation WHERE id_medecin = ?`, [id], (err, rows) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-        } else {
-            res.json(rows);
-        }
-    });
-});
-
+// ===== STATISTIQUES MÉDECIN (CORRIGÉES) =====
 app.get('/api/stats/medecin/:id', (req, res) => {
     const id = req.params.id;
+    const today = new Date().toISOString().split('T')[0]; // Date YYYY-MM-DD
 
-    db.get(`SELECT COUNT(*) as consultations_jour FROM consultation WHERE id_medecin = ? AND date(date_heure) = date('now')`, [id], (err, cons) => {
-        if (err) {
-            return res.status(500).json({ error: err.message });
-        }
-        db.get(`SELECT COUNT(DISTINCT id_beneficiaire) as patients_total FROM consultation WHERE id_medecin = ?`, [id], (err, pat) => {
-            if (err) {
-                return res.status(500).json({ error: err.message });
-            }
-            db.get(`SELECT COUNT(*) as rdv_jour FROM rendez_vous WHERE id_medecin = ? AND date(date_rdv) = date('now')`, [id], (err, rdvJ) => {
-                if (err) {
-                    return res.status(500).json({ error: err.message });
-                }
-                db.get(`SELECT COUNT(*) as rdv_attente FROM rendez_vous WHERE id_medecin = ? AND statut = 'en_attente'`, [id], (err, rdvA) => {
-                    if (err) {
-                        return res.status(500).json({ error: err.message });
-                    }
+    // Utilisation de LIKE pour filtrer par date sans dépendre de fonctions SQL natives
+    db.get(`SELECT COUNT(*) as count FROM consultation WHERE id_medecin = ? AND date_heure LIKE ?`, [id, `${today}%`], (err, cons) => {
+        if (err) return res.status(500).json({ error: err.message });
+        
+        db.get(`SELECT COUNT(DISTINCT id_beneficiaire) as count FROM consultation WHERE id_medecin = ?`, [id], (err, pat) => {
+            if (err) return res.status(500).json({ error: err.message });
+            
+            db.get(`SELECT COUNT(*) as count FROM rendez_vous WHERE id_medecin = ? AND date_rdv LIKE ?`, [id, `${today}%`], (err, rdvJ) => {
+                if (err) return res.status(500).json({ error: err.message });
+                
+                db.get(`SELECT COUNT(*) as count FROM rendez_vous WHERE id_medecin = ? AND statut = 'en_attente'`, [id], (err, rdvA) => {
+                    if (err) return res.status(500).json({ error: err.message });
+                    
                     res.json({
-                        consultations_jour: cons ? cons.consultations_jour : 0,
-                        patients_total: pat ? pat.patients_total : 0,
-                        rdv_jour: rdvJ ? rdvJ.rdv_jour : 0,
-                        rdv_attente: rdvA ? rdvA.rdv_attente : 0
+                        consultations_jour: cons ? cons.count : 0,
+                        patients_total: pat ? pat.count : 0,
+                        rdv_jour: rdvJ ? rdvJ.count : 0,
+                        rdv_attente: rdvA ? rdvA.count : 0
                     });
                 });
             });
@@ -161,17 +88,6 @@ app.get('/api/stats/medecin/:id', (req, res) => {
     });
 });
 
-// ==================== DÉMARRAGE ====================
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Serveur démarré sur http://localhost:${PORT}`);
-    console.log(`📁 Frontend: http://localhost:${PORT}/index.html`);
-    console.log(`📱 Accessible depuis le réseau à http://<VOTRE_IP>:${PORT}`);
-});
-
-// Fermeture propre de la base
-process.on('SIGINT', () => {
-    db.close((err) => {
-        console.log('🔌 Déconnexion de la base');
-        process.exit(err ? 1 : 0);
-    });
+    console.log(`🚀 Serveur actif sur http://localhost:${PORT}`);
 });
