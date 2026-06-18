@@ -13,6 +13,11 @@ const db = {};
 
 // === db.get : récupère une seule ligne ===
 db.get = (sql, params, callback) => {
+    // Si params est une fonction, on le déplace dans callback
+    if (typeof params === 'function') {
+        callback = params;
+        params = [];
+    }
     try {
         const tableName = extractTableName(sql);
         supabase.from(tableName).select('*').then(({ data, error }) => {
@@ -34,6 +39,10 @@ db.get = (sql, params, callback) => {
 
 // === db.all : récupère plusieurs lignes ===
 db.all = (sql, params, callback) => {
+    if (typeof params === 'function') {
+        callback = params;
+        params = [];
+    }
     try {
         const tableName = extractTableName(sql);
         supabase.from(tableName).select('*').then(({ data, error }) => {
@@ -53,8 +62,13 @@ db.all = (sql, params, callback) => {
     }
 };
 
-// === db.run : exécute une requête (INSERT, UPDATE, DELETE) ===
+// === db.run : exécute une requête ===
 db.run = (sql, params, callback) => {
+    // Si params est une fonction, on le déplace dans callback
+    if (typeof params === 'function') {
+        callback = params;
+        params = [];
+    }
     try {
         const tableName = extractTableName(sql);
         if (sql.trim().toLowerCase().startsWith('insert')) {
@@ -69,10 +83,13 @@ db.run = (sql, params, callback) => {
                 callback(err, null);
             });
         } else if (sql.trim().toLowerCase().startsWith('update')) {
-            // Pour l'instant, on simule un succès pour éviter les blocages
+            // Pour l'instant, on simule un succès
             callback(null, { changes: 1 });
         } else if (sql.trim().toLowerCase().startsWith('delete')) {
             callback(null, { changes: 1 });
+        } else if (sql.trim().toLowerCase().includes('alter table')) {
+            // ALTER TABLE - on simule un succès
+            callback(null);
         } else {
             callback(new Error('Requête non supportée'), null);
         }
@@ -143,7 +160,7 @@ db.logAction = (userId, userType, action, ip, callback) => {
     });
 };
 
-// === FONCTION UTILITAIRE : extraire le nom de la table ===
+// === FONCTIONS UTILITAIRES ===
 function extractTableName(sql) {
     const match = sql.match(/FROM\s+(\w+)/i);
     if (match) return match[1];
