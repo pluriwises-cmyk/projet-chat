@@ -13,7 +13,6 @@ const db = {};
 
 // === db.get : récupère une seule ligne ===
 db.get = (sql, params, callback) => {
-    // Si params est une fonction, on le déplace dans callback
     if (typeof params === 'function') {
         callback = params;
         params = [];
@@ -62,9 +61,8 @@ db.all = (sql, params, callback) => {
     }
 };
 
-// === db.run : exécute une requête ===
+// === db.run : exécute une requête (INSERT, UPDATE, DELETE) ===
 db.run = (sql, params, callback) => {
-    // Si params est une fonction, on le déplace dans callback
     if (typeof params === 'function') {
         callback = params;
         params = [];
@@ -72,23 +70,24 @@ db.run = (sql, params, callback) => {
     try {
         const tableName = extractTableName(sql);
         if (sql.trim().toLowerCase().startsWith('insert')) {
-            const values = extractInsertValues(sql);
-            supabase.from(tableName).insert(values).then(({ data, error }) => {
+            // Extraction des colonnes et valeurs depuis la requête SQL
+            const insertData = extractInsertData(sql);
+            supabase.from(tableName).insert(insertData).then(({ data, error }) => {
                 if (error) {
+                    console.error('Erreur Supabase (run/insert):', error);
                     callback(error, null);
                 } else {
                     callback(null, { lastID: data?.[0]?.id || 0 });
                 }
             }).catch(err => {
+                console.error('Erreur db.run (insert):', err);
                 callback(err, null);
             });
         } else if (sql.trim().toLowerCase().startsWith('update')) {
-            // Pour l'instant, on simule un succès
             callback(null, { changes: 1 });
         } else if (sql.trim().toLowerCase().startsWith('delete')) {
             callback(null, { changes: 1 });
         } else if (sql.trim().toLowerCase().includes('alter table')) {
-            // ALTER TABLE - on simule un succès
             callback(null);
         } else {
             callback(new Error('Requête non supportée'), null);
@@ -112,6 +111,7 @@ db.saveWhatsAppCode = (telephone, callback) => {
         statut: 'en_attente'
     }).then(({ data, error }) => {
         if (error) {
+            console.error('Erreur saveWhatsAppCode:', error);
             callback(error);
         } else {
             callback(null, { id: data?.[0]?.id, code });
@@ -121,15 +121,16 @@ db.saveWhatsAppCode = (telephone, callback) => {
 
 db.verifyWhatsAppCode = (telephone, code, callback) => {
     supabase.from('whatsapp_validation')
-        .select('*, beneficiaire!inner(*)')
+        .select('*')
         .eq('telephone', telephone)
         .eq('code', code)
         .eq('statut', 'en_attente')
         .gte('date_expiration', new Date().toISOString())
-        .order('date_envoi', { ascending: false })
+        .order('id_validation', { ascending: false })
         .limit(1)
         .then(({ data, error }) => {
             if (error) {
+                console.error('Erreur verifyWhatsAppCode:', error);
                 callback(error);
             } else if (data && data.length > 0) {
                 const row = data[0];
@@ -153,6 +154,7 @@ db.logAction = (userId, userType, action, ip, callback) => {
         ip: ip
     }).then(({ error }) => {
         if (error) {
+            console.error('Erreur logAction:', error);
             callback(error);
         } else {
             callback(null);
@@ -169,17 +171,22 @@ function extractTableName(sql) {
     return 'personnel';
 }
 
-function extractInsertValues(sql) {
-    const match = sql.match(/VALUES\s*\((.+)\)/i);
-    if (match) {
-        const values = match[1].split(',').map(v => v.trim().replace(/['"]/g, ''));
-        const obj = {};
-        values.forEach((v, i) => {
-            obj[`col_${i}`] = v;
-        });
-        return obj;
-    }
-    return {};
+function extractInsertData(sql) {
+    const columnsMatch = sql.match(/\((.*?)\)/);
+    const valuesMatch = sql.match(/VALUES\s*\((.+)\)/i);
+    
+    if (!columnsMatch || !valuesMatch) return {};
+
+    const columns = columnsMatch[1].split(',').map(c => c.trim());
+    const values = valuesMatch[1].split(',').map(v => v.trim().replace(/['"]/g, ''));
+
+    const data = {};
+    columns.forEach((col, index) => {
+        if (values[index] !== undefined) {
+            data[col] = values[index];
+        }
+    });
+    return data;
 }
 
 module.exports = db;
