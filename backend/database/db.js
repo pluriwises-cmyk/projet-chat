@@ -13,7 +13,7 @@ const db = {};
 // 1. FONCTIONS PRINCIPALES
 // ==========================================
 
-// Récupère une seule ligne
+// === db.get : Récupère une seule ligne (corrigé) ===
 db.get = (sql, params, callback) => {
     if (typeof params === 'function') {
         callback = params;
@@ -23,12 +23,15 @@ db.get = (sql, params, callback) => {
         const tableName = extractTableName(sql);
         let query = supabase.from(tableName).select('*');
 
-        if (sql.toUpperCase().includes('OR')) {
+        // On ne cherche l'email que si la table est 'personnel' ou 'beneficiaire'
+        const isAuthTable = ['personnel', 'beneficiaire'].includes(tableName);
+        
+        if (sql.toUpperCase().includes('OR') && isAuthTable) {
             query = query.or(`email.eq.${params[0]},telephone.eq.${params[0]}`);
         } else {
             const conditions = extractWhereConditions(sql);
-            conditions.forEach(cond => {
-                query = query.eq(cond.column, cond.value);
+            conditions.forEach((cond, i) => { 
+                query = query.eq(cond.column, params[i] || cond.value);
             });
         }
 
@@ -37,7 +40,7 @@ db.get = (sql, params, callback) => {
                 console.error('Erreur Supabase (get):', error);
                 callback(error, null);
             } else {
-                callback(null, data[0] || null);
+                callback(null, data && data.length > 0 ? data[0] : null);
             }
         });
     } catch (err) {
@@ -46,7 +49,7 @@ db.get = (sql, params, callback) => {
     }
 };
 
-// Récupère plusieurs lignes
+// === db.all : Récupère plusieurs lignes ===
 db.all = (sql, params, callback) => {
     if (typeof params === 'function') {
         callback = params;
@@ -68,7 +71,7 @@ db.all = (sql, params, callback) => {
     }
 };
 
-// Exécute INSERT, UPDATE, DELETE
+// === db.run : INSERT, UPDATE, DELETE (corrigé) ===
 db.run = (sql, params, callback) => {
     if (typeof params === 'function') {
         callback = params;
@@ -136,6 +139,7 @@ db.run = (sql, params, callback) => {
 // 2. FONCTIONS WHATSAPP
 // ==========================================
 
+// === Sauvegarde d'un code WhatsApp ===
 db.saveWhatsAppCode = (telephone, callback) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiration = new Date();
@@ -161,6 +165,7 @@ db.saveWhatsAppCode = (telephone, callback) => {
     });
 };
 
+// === Vérification d'un code WhatsApp ===
 db.verifyWhatsAppCode = (telephone, code, callback) => {
     supabase.from('whatsapp_validation')
         .select('*')
@@ -188,6 +193,7 @@ db.verifyWhatsAppCode = (telephone, code, callback) => {
         });
 };
 
+// === Journalisation des actions ===
 db.logAction = (userId, userType, action, ip, callback) => {
     supabase.from('logs_connexion').insert({
         id_utilisateur: userId,
