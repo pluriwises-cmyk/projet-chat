@@ -9,61 +9,32 @@ function generateCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// ==========================================
-// DEMANDER UN CODE (POST)
-// ==========================================
+// Demander un code
 router.post('/request-code', (req, res) => {
-    console.log('📱 Demande de code reçue:', req.body);
     const { telephone } = req.body;
-
-    if (!telephone) {
-        return res.status(400).json({ error: 'Téléphone requis' });
-    }
+    if (!telephone) return res.status(400).json({ error: 'Téléphone requis' });
 
     const code = generateCode();
     const dateExpiration = new Date();
     dateExpiration.setMinutes(dateExpiration.getMinutes() + 2);
 
-    console.log(`✅ Code généré pour ${telephone}: ${code}`);
-
-    // 1. Supprimer les anciens codes pour ce téléphone
     db.run('DELETE FROM whatsapp_validation WHERE telephone = ?', [telephone], (err) => {
-        if (err) {
-            console.error('Erreur suppression anciens codes:', err);
-            return res.status(500).json({ error: 'Erreur serveur' });
-        }
-
-        // 2. Insérer le nouveau code
         db.run(
-            `INSERT INTO whatsapp_validation (telephone, code, date_expiration, statut, tentative)
+            `INSERT INTO whatsapp_validation (telephone, code, date_expiration, statut, tentative) 
              VALUES (?, ?, ?, 'en_attente', 0)`,
             [telephone, code, dateExpiration.toISOString()],
-            function (err) {
-                if (err) {
-                    console.error('Erreur insertion:', err);
-                    return res.status(500).json({ error: 'Erreur serveur' });
-                }
-
-                res.json({
-                    success: true,
-                    message: 'Code envoyé',
-                    code_dev: code
-                });
+            (err) => {
+                if (err) return res.status(500).json({ error: 'Erreur serveur' });
+                res.json({ success: true, code_dev: code });
             }
         );
     });
 });
 
-// ==========================================
-// VÉRIFIER LE CODE (POST)
-// ==========================================
+// Vérifier le code (à garder tel quel)
 router.post('/verify-code', (req, res) => {
-    console.log('🔍 Vérification code reçue:', req.body);
     const { telephone, code } = req.body;
-
-    if (!telephone || !code) {
-        return res.status(400).json({ error: 'Téléphone et code requis' });
-    }
+    if (!telephone || !code) return res.status(400).json({ error: 'Téléphone et code requis' });
 
     db.get(
         `SELECT * FROM whatsapp_validation 
@@ -71,113 +42,44 @@ router.post('/verify-code', (req, res) => {
          ORDER BY id_validation DESC LIMIT 1`,
         [telephone, code],
         (err, validation) => {
-            if (err) {
-                console.error('Erreur DB:', err);
-                return res.status(500).json({ error: 'Erreur serveur' });
-            }
-
-            if (!validation) {
-                return res.status(400).json({ error: 'Code invalide' });
-            }
+            if (err) return res.status(500).json({ error: 'Erreur serveur' });
+            if (!validation) return res.status(400).json({ error: 'Code invalide' });
 
             const dateExpiration = new Date(validation.date_expiration);
             if (dateExpiration < new Date()) {
-                db.run('UPDATE whatsapp_validation SET statut = ? WHERE id_validation = ?',
-                    ['expire', validation.id_validation]);
+                db.run('UPDATE whatsapp_validation SET statut = ? WHERE id_validation = ?', ['expire', validation.id_validation]);
                 return res.status(400).json({ error: 'Code expiré' });
             }
 
             db.run(
-                `UPDATE whatsapp_validation 
-                 SET statut = 'valide', date_validation = NOW()
-                 WHERE id_validation = ?`,
+                `UPDATE whatsapp_validation SET statut = 'valide', date_validation = NOW() WHERE id_validation = ?`,
                 [validation.id_validation],
                 (err) => {
-                    if (err) {
-                        console.error('Erreur update:', err);
-                        return res.status(500).json({ error: 'Erreur serveur' });
-                    }
+                    if (err) return res.status(500).json({ error: 'Erreur serveur' });
 
-                    // Vérifier d'abord dans personnel (médecins, infirmiers)
                     db.get('SELECT * FROM personnel WHERE telephone = ?', [telephone], (err, personnel) => {
-                        if (err) {
-                            console.error('Erreur DB personnel:', err);
-                            return res.status(500).json({ error: 'Erreur serveur' });
-                        }
-
                         if (personnel) {
-                            const role = personnel.poste || 'personnel';
                             const token = jwt.sign(
-                                {
-                                    id: personnel.id_personnel,
-                                    telephone: personnel.telephone,
-                                    nom: personnel.nom,
-                                    prenom: personnel.prenom,
-                                    role: role,
-                                    type: 'personnel'
-                                },
+                                { id: personnel.id_personnel, telephone: personnel.telephone, nom: personnel.nom, prenom: personnel.prenom, role: personnel.poste || 'personnel', type: 'personnel' },
                                 JWT_SECRET,
                                 { expiresIn: '7d' }
                             );
-
-                            return res.json({
-                                success: true,
-                                message: 'Connexion réussie',
-                                token: token,
-                                role: role,
-                                user: {
-                                    id: personnel.id_personnel,
-                                    nom: personnel.nom,
-                                    prenom: personnel.prenom,
-                                    telephone: personnel.telephone,
-                                    role: role
-                                }
-                            });
+                            return res.json({ success: true, token, role: personnel.poste || 'personnel', user: { id: personnel.id_personnel, nom: personnel.nom, prenom: personnel.prenom, telephone: personnel.telephone, role: personnel.poste || 'personnel' } });
                         }
 
-                        // Sinon, vérifier dans beneficiaire (patients)
-                        db.get('SELECT * FROM beneficiaire WHERE telephone = ? OR whatsapp = ?',
-                            [telephone, telephone],
-                            (err, beneficiaire) => {
-                                if (err) {
-                                    console.error('Erreur DB beneficiaire:', err);
-                                    return res.status(500).json({ error: 'Erreur serveur' });
-                                }
-
-                                if (beneficiaire) {
-                                    const token = jwt.sign(
-                                        {
-                                            id: beneficiaire.id_beneficiaire,
-                                            telephone: beneficiaire.telephone,
-                                            nom: beneficiaire.nom,
-                                            prenom: beneficiaire.prenom,
-                                            role: 'patient',
-                                            type: 'patient'
-                                        },
-                                        JWT_SECRET,
-                                        { expiresIn: '7d' }
-                                    );
-                                    return res.json({
-                                        success: true,
-                                        message: 'Connexion réussie',
-                                        token: token,
-                                        role: 'patient'
-                                    });
-                                } else {
-                                    const tempToken = jwt.sign(
-                                        { telephone: telephone, type: 'temp' },
-                                        JWT_SECRET,
-                                        { expiresIn: '1h' }
-                                    );
-                                    return res.json({
-                                        success: true,
-                                        message: 'Code valide, inscription requise',
-                                        telephone: telephone,
-                                        tempToken: tempToken
-                                    });
-                                }
+                        db.get('SELECT * FROM beneficiaire WHERE telephone = ? OR whatsapp = ?', [telephone, telephone], (err, beneficiaire) => {
+                            if (beneficiaire) {
+                                const token = jwt.sign(
+                                    { id: beneficiaire.id_beneficiaire, telephone: beneficiaire.telephone, nom: beneficiaire.nom, prenom: beneficiaire.prenom, role: 'patient', type: 'patient' },
+                                    JWT_SECRET,
+                                    { expiresIn: '7d' }
+                                );
+                                return res.json({ success: true, token, role: 'patient' });
+                            } else {
+                                const tempToken = jwt.sign({ telephone: telephone, type: 'temp' }, JWT_SECRET, { expiresIn: '1h' });
+                                return res.json({ success: true, telephone, tempToken });
                             }
-                        );
+                        });
                     });
                 }
             );
