@@ -1,4 +1,3 @@
-
 // backend/app.js
 const express = require('express');
 const cors = require('cors');
@@ -34,7 +33,7 @@ const initDatabase = () => {
             console.log('✅ Colonne mot_de_passe ajoutée avec succès');
         }
         
-        // 2. Injection des comptes personnel (démo)
+        // 2. Injection des comptes personnel (démo) – UNIQUEMENT CEUX-CI
         const users = [
             ['Dellal', 'Jamal', 'medecin', 'jean.dupont@chat.com', '0612345601', 'password123', 'actif'],
             ['Diallo', 'Imad', 'medecin', 'dr.diallo@chat.com', '771234444', 'password123', 'actif'],
@@ -65,74 +64,9 @@ const initDatabase = () => {
             });
         });
 
-        // 3. Injection des données de test (bénéficiaires, chambres, etc.)
-        setTimeout(() => {
-            console.log('🔄 Injection des données de test...');
-
-            const testData = [
-                // Bénéficiaires
-                `INSERT OR IGNORE INTO beneficiaire (nom, prenom, type, telephone, email, statut) VALUES
-                 ('Derbel', 'Hamidou', 'patient', '771234567', 'hamidou.derbel@chat.com', 'actif'),
-                 ('Fillali', 'Amina', 'touriste', '781234567', 'amina.fillali@chat.com', 'actif'),
-                 ('Sowali', 'Oumar', 'mixte', '761234567', 'oumar.sowali@chat.com', 'actif'),
-                 ('Benchaa', 'Mustapha', 'patient', '55555555', 'mustapha.benchaa@chat.com', 'actif'),
-                 ('Sarnou', 'Yacine', 'patient', '666666666', 'yacine.sarnou@chat.com', 'actif'),
-                 ('Mansour', 'Houari', 'patient', '3399902100', 'houari.mansour@chat.com', 'actif'),
-                 ('Boudouma', 'Saleh', 'patient', '60606060', 'saleh.boudouma@chat.com', 'actif')`,
-
-                // Chambres
-                `INSERT OR IGNORE INTO chambre (numero, type, capacite, statut) VALUES
-                 ('101', 'standard', 2, 'libre'),
-                 ('102', 'standard', 2, 'libre'),
-                 ('201', 'medicalisee', 1, 'libre'),
-                 ('202', 'medicalisee', 1, 'libre'),
-                 ('301', 'suite', 2, 'libre'),
-                 ('103', 'medicalisee', 1, 'occupee'),
-                 ('104', 'standard', 1, 'libre'),
-                 ('110', 'standard', 2, 'libre')`,
-
-                // Véhicules
-                `INSERT OR IGNORE INTO vehicule (immatriculation, type, etat) VALUES
-                 ('AMB-001', 'ambulance', 'disponible'),
-                 ('MB-002', 'minibus', 'disponible'),
-                 ('AB-123-CD', 'ambulance', 'disponible'),
-                 ('EF-456-GH', 'ambulance', 'en_course'),
-                 ('IJ-789-KL', 'voiture', 'disponible'),
-                 ('MN-012-OP', 'minibus', 'maintenance')`,
-
-                // Services
-                `INSERT OR IGNORE INTO service (nom, departement, description) VALUES
-                 ('Hospitalisation', 'medical', 'Service d''hospitalisation'),
-                 ('Consultations', 'medical', 'Consultations généralistes et spécialisées'),
-                 ('Rééducation', 'medical', 'Service de rééducation fonctionnelle'),
-                 ('Apithérapie', 'medical', 'Traitements à base de miel'),
-                 ('Réception Hôtel', 'hotellerie', 'Accueil des touristes'),
-                 ('Étages', 'hotellerie', 'Gestion des étages et chambres'),
-                 ('Restauration', 'hotellerie', 'Restauration collective'),
-                 ('Agence Voyages', 'hotellerie', 'Organisation des courses'),
-                 ('RH', 'gestion', 'Ressources humaines'),
-                 ('Comptabilité', 'gestion', 'Gestion financière'),
-                 ('Moyens Généraux', 'gestion', 'Maintenance, logistique'),
-                 ('Informatique', 'gestion', 'Systèmes d’information'),
-                 ('Direction', 'direction', 'Direction générale')`,
-
-                // Paramètres
-                `INSERT OR IGNORE INTO parametre (cle, valeur, description) VALUES
-                 ('nom_etablissement', 'Clinique Hôtelière et Actions Touristiques (CHAT)', 'Nom officiel'),
-                 ('adresse', 'UDL SBA, ALGERIE', 'Adresse complète'),
-                 ('telephone', '+213 773 460 284', 'Téléphone standard'),
-                 ('langue', 'Arabe,Anglais,Français', 'Langues disponibles'),
-                 ('fuseau_horaire', 'GMT+1', 'Fuseau horaire')`
-            ];
-
-            testData.forEach(sql => {
-                db.run(sql, (err) => {
-                    if (err) console.error('❌ Erreur injection test:', err.message);
-                });
-            });
-
-            console.log('✅ Données de test injectées (bénéficiaires, chambres, véhicules, services, paramètres)');
-        }, 1000);
+        // ==== SUPPRESSION DE LA RÉINITIALISATION DES BÉNÉFICIAIRES ====
+        // Plus d'insertion de bénéficiaires de test, les données existantes sont conservées.
+        console.log('✅ Initialisation terminée (sans écrasement des bénéficiaires)');
     });
 };
 
@@ -183,17 +117,8 @@ app.get('/api/test', (req, res) => {
         }
     });
 });
-app.get('/api/test-consultations/:id', (req, res) => {
-    const id = req.params.id;
-    db.all(`SELECT * FROM consultation WHERE id_medecin = ?`, [id], (err, rows) => {
-        if (err) {
-            res.json({ error: err.message });
-        } else {
-            res.json({ consultations: rows });
-        }
-    });
-});
-// ==================== ROUTE CONSULTATIONS MÉDECIN ====================
+
+// ==================== ROUTES POUR MÉDECIN ====================
 app.get('/api/consultations/medecin/:id', (req, res) => {
     const id = req.params.id;
     db.all(`SELECT * FROM consultation WHERE id_medecin = ?`, [id], (err, rows) => {
@@ -204,6 +129,7 @@ app.get('/api/consultations/medecin/:id', (req, res) => {
         }
     });
 });
+
 app.get('/api/stats/medecin/:id', (req, res) => {
     const id = req.params.id;
 
