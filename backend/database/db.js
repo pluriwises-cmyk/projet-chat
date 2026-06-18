@@ -5,15 +5,15 @@ const supabaseUrl = process.env.SUPABASE_URL || 'https://mtcumvngnalsozoufltk.su
 const supabaseKey = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10Y3Vtdm5nbmFsc296b3VmbHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODM4NDcsImV4cCI6MjA5NzM1OTg0N30.lBiqoKoAuDgdiYoqeQT1W6Qc_4oycLfrpRzzeFR_Ht8';
 
 const supabase = createClient(supabaseUrl, supabaseKey);
-console.log('✅ Connecté à Supabase (Mode Compatible SQLite)');
+console.log('✅ Connecté à Supabase');
 
 const db = {};
 
 // ==========================================
-// FONCTIONS PRINCIPALES
+// 1. FONCTIONS PRINCIPALES
 // ==========================================
 
-// === db.get : récupère une seule ligne ===
+// Récupère une seule ligne
 db.get = (sql, params, callback) => {
     if (typeof params === 'function') {
         callback = params;
@@ -46,7 +46,7 @@ db.get = (sql, params, callback) => {
     }
 };
 
-// === db.all : récupère plusieurs lignes ===
+// Récupère plusieurs lignes
 db.all = (sql, params, callback) => {
     if (typeof params === 'function') {
         callback = params;
@@ -68,7 +68,7 @@ db.all = (sql, params, callback) => {
     }
 };
 
-// === db.run : INSERT, UPDATE, DELETE ===
+// Exécute INSERT, UPDATE, DELETE
 db.run = (sql, params, callback) => {
     if (typeof params === 'function') {
         callback = params;
@@ -79,7 +79,13 @@ db.run = (sql, params, callback) => {
         const sqlLower = sql.trim().toLowerCase();
 
         if (sqlLower.startsWith('insert')) {
-            supabase.from(tableName).insert(extractInsertData(sql)).then(({ data, error }) => {
+            const keys = extractInsertKeys(sql);
+            const insertPayload = {};
+            keys.forEach((key, i) => {
+                insertPayload[key] = params[i] !== undefined ? params[i] : null;
+            });
+
+            supabase.from(tableName).insert(insertPayload).then(({ data, error }) => {
                 if (error) {
                     console.error('Erreur Supabase (run/insert):', error);
                     callback(error, null);
@@ -88,10 +94,12 @@ db.run = (sql, params, callback) => {
                 }
             });
         } else if (sqlLower.startsWith('update')) {
+            const updateData = extractUpdateData(sql);
             const conditions = extractWhereConditions(sql);
-            let query = supabase.from(tableName).update(extractUpdateData(sql));
-            conditions.forEach(c => {
-                query = query.eq(c.column, c.value);
+            let query = supabase.from(tableName).update(updateData);
+            const paramIndex = Object.keys(updateData).length;
+            conditions.forEach((c, i) => {
+                query = query.eq(c.column, params[paramIndex + i]);
             });
             query.then(({ error }) => {
                 if (error) {
@@ -104,8 +112,8 @@ db.run = (sql, params, callback) => {
         } else if (sqlLower.startsWith('delete')) {
             const conditions = extractWhereConditions(sql);
             let query = supabase.from(tableName).delete();
-            conditions.forEach(c => {
-                query = query.eq(c.column, c.value);
+            conditions.forEach((c, i) => {
+                query = query.eq(c.column, params[i]);
             });
             query.then(({ error }) => {
                 if (error) {
@@ -125,28 +133,29 @@ db.run = (sql, params, callback) => {
 };
 
 // ==========================================
-// FONCTIONS WHATSAPP (corrigées)
+// 2. FONCTIONS WHATSAPP
 // ==========================================
 
 db.saveWhatsAppCode = (telephone, callback) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiration = new Date();
     expiration.setMinutes(expiration.getMinutes() + 2);
-    const dateSql = expiration.toISOString().replace('T', ' ').substring(0, 19);
 
-    console.log("DEBUG: Tentative d'insertion avec date:", dateSql);
+    console.log("DEBUG: Insertion code WhatsApp pour:", telephone);
 
     supabase.from('whatsapp_validation').insert({
         telephone: telephone,
         code: code,
-        date_expiration: dateSql,
-        statut: 'en_attente'
+        date_expiration: expiration.toISOString(),
+        date_envoi: new Date().toISOString(),
+        statut: 'en_attente',
+        tentative: 0
     }).then(({ data, error }) => {
         if (error) {
-            console.error('❌ ERREUR SUPABASE DANS saveWhatsAppCode:', JSON.stringify(error, null, 2));
+            console.error('❌ ERREUR SUPABASE:', error);
             callback(error);
         } else {
-            console.log("✅ Code WhatsApp inséré avec succès");
+            console.log("✅ Code WhatsApp inséré !");
             callback(null, { id: data?.[0]?.id, code });
         }
     });
@@ -196,7 +205,7 @@ db.logAction = (userId, userType, action, ip, callback) => {
 };
 
 // ==========================================
-// FONCTIONS UTILITAIRES
+// 3. FONCTIONS UTILITAIRES
 // ==========================================
 
 function extractTableName(sql) {
@@ -213,15 +222,10 @@ function extractWhereConditions(sql) {
     }).filter(c => c.column);
 }
 
-function extractInsertData(sql) {
-    const columnsMatch = sql.match(/\((.*?)\)/);
-    const valuesMatch = sql.match(/VALUES\s*\((.+)\)/i);
-    if (!columnsMatch || !valuesMatch) return {};
-    const columns = columnsMatch[1].split(',').map(c => c.trim());
-    const values = valuesMatch[1].split(',').map(v => v.trim().replace(/['"]/g, ''));
-    const data = {};
-    columns.forEach((col, i) => data[col] = values[i]);
-    return data;
+function extractInsertKeys(sql) {
+    const match = sql.match(/\((.*?)\)/);
+    if (!match) return [];
+    return match[1].split(',').map(c => c.trim());
 }
 
 function extractUpdateData(sql) {
