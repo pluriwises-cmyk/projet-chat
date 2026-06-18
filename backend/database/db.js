@@ -1,4 +1,4 @@
-// backend/database/db.js
+// === FICHIER: backend/database/db.js ===
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL || 'https://mtcumvngnalsozoufltk.supabase.co';
@@ -105,11 +105,13 @@ db.run = (sql, params, callback) => {
     }
 };
 
-// === FONCTIONS WHATSAPP (inchangées) ===
+// === FONCTIONS WHATSAPP (AVEC LOGS DE DEBUG) ===
 db.saveWhatsAppCode = (telephone, callback) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiration = new Date();
     expiration.setMinutes(expiration.getMinutes() + 2);
+
+    console.log("DEBUG: Tentative d'insertion code WhatsApp pour:", telephone);
 
     supabase.from('whatsapp_validation').insert({
         telephone: telephone,
@@ -118,9 +120,10 @@ db.saveWhatsAppCode = (telephone, callback) => {
         statut: 'en_attente'
     }).then(({ data, error }) => {
         if (error) {
-            console.error('Erreur saveWhatsAppCode:', error);
+            console.error('❌ ERREUR SUPABASE DANS saveWhatsAppCode:', JSON.stringify(error, null, 2));
             callback(error);
         } else {
+            console.log("✅ Code WhatsApp inséré avec succès");
             callback(null, { id: data?.[0]?.id, code });
         }
     });
