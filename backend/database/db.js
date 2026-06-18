@@ -1,80 +1,154 @@
 // backend/database/db.js
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
+const { createClient } = require('@supabase/supabase-js');
 
-// Chemin vers la base de données
-const dbPath = path.join(__dirname, 'hospitalier.db');
+// === TES IDENTIFIANTS SUPABASE ===
+const supabaseUrl = 'https://mtcumvngnalsozoufltk.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10Y3Vtdm5nbmFsc296b3VmbHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODM4NDcsImV4cCI6MjA5NzM1OTg0N30.lBiqoKoAuDgdiYoqeQT1W6Qc_4oycLfrpRzzeFR_Ht8';
 
-// Connexion à la base
-const db = new sqlite3.Database(dbPath, (err) => {
-    if (err) {
-        console.error('❌ Erreur de connexion à la base:', err.message);
-    } else {
-        console.log('✅ Connecté à la base SQLite');
+const supabase = createClient(supabaseUrl, supabaseKey);
+
+console.log('✅ Connecté à Supabase');
+
+// ============================================
+// FONCTIONS POUR REMPLACER SQLITE
+// ============================================
+
+// === db.get : récupère une seule ligne ===
+db.get = async (sql, params, callback) => {
+    try {
+        const tableName = extractTableName(sql);
+        const { data, error } = await supabase.from(tableName).select('*');
+        if (error) {
+            console.error('Erreur Supabase (get):', error);
+            callback(error, null);
+        } else {
+            callback(null, data[0] || null);
+        }
+    } catch (err) {
+        console.error('Erreur db.get:', err);
+        callback(err, null);
     }
-});
+};
 
-// ============================================
-// FONCTIONS WHATSAPP
-// ============================================
+// === db.all : récupère plusieurs lignes ===
+db.all = async (sql, params, callback) => {
+    try {
+        const tableName = extractTableName(sql);
+        const { data, error } = await supabase.from(tableName).select('*');
+        if (error) {
+            console.error('Erreur Supabase (all):', error);
+            callback(error, null);
+        } else {
+            callback(null, data);
+        }
+    } catch (err) {
+        console.error('Erreur db.all:', err);
+        callback(err, null);
+    }
+};
 
-// Générer et sauvegarder un code WhatsApp
+// === db.run : exécute une requête (INSERT, UPDATE, DELETE) ===
+db.run = async (sql, params, callback) => {
+    try {
+        const tableName = extractTableName(sql);
+        if (sql.trim().toLowerCase().startsWith('insert')) {
+            const values = extractInsertValues(sql);
+            const { data, error } = await supabase.from(tableName).insert(values);
+            if (error) {
+                callback(error, null);
+            } else {
+                callback(null, { lastID: data?.[0]?.id || 0 });
+            }
+        } else {
+            callback(new Error('Requête non supportée pour l\'instant'), null);
+        }
+    } catch (err) {
+        console.error('Erreur db.run:', err);
+        callback(err, null);
+    }
+};
+
+// === FONCTIONS SPÉCIFIQUES WHATSAPP ===
 db.saveWhatsAppCode = (telephone, callback) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiration = new Date();
     expiration.setMinutes(expiration.getMinutes() + 2);
 
-    db.run(
-        `INSERT INTO whatsapp_validation (telephone, code, date_expiration, statut) 
-         VALUES (?, ?, ?, 'en_attente')`,
-        [telephone, code, expiration.toISOString()],
-        function (err) {
-            if (err) {
-                console.error('Erreur sauvegarde code:', err);
-                callback(err);
-            } else {
-                callback(null, { id: this.lastID, code });
-            }
+    supabase.from('whatsapp_validation').insert({
+        telephone: telephone,
+        code: code,
+        date_expiration: expiration.toISOString(),
+        statut: 'en_attente'
+    }).then(({ data, error }) => {
+        if (error) {
+            callback(error);
+        } else {
+            callback(null, { id: data?.[0]?.id, code });
         }
-    );
+    });
 };
 
-// Vérifier un code WhatsApp
 db.verifyWhatsAppCode = (telephone, code, callback) => {
-    db.get(
-        `SELECT w.*, b.id_beneficiaire, b.nom, b.prenom 
-         FROM whatsapp_validation w
-         LEFT JOIN beneficiaire b ON w.telephone = b.telephone OR w.telephone = b.whatsapp
-         WHERE w.telephone = ? AND w.code = ? AND w.statut = 'en_attente'
-         AND w.date_expiration > datetime('now')
-         ORDER BY w.date_envoi DESC LIMIT 1`,
-        [telephone, code],
-        (err, row) => {
-            if (err) {
-                callback(err);
-            } else if (row) {
-                // Marquer comme validé
-                db.run(
-                    `UPDATE whatsapp_validation SET statut = 'valide', date_validation = datetime('now') 
-                     WHERE id_validation = ?`,
-                    [row.id_validation]
-                );
-                callback(null, row);
+    supabase.from('whatsapp_validation')
+        .select('*, beneficiaire!inner(*)')
+        .eq('telephone', telephone)
+        .eq('code', code)
+        .eq('statut', 'en_attente')
+        .gte('date_expiration', new Date().toISOString())
+        .order('date_envoi', { ascending: false })
+        .limit(1)
+        .then(({ data, error }) => {
+            if (error) {
+                callback(error);
+            } else if (data && data.length > 0) {
+                const row = data[0];
+                supabase.from('whatsapp_validation')
+                    .update({ statut: 'valide', date_validation: new Date().toISOString() })
+                    .eq('id_validation', row.id_validation)
+                    .then(() => {
+                        callback(null, row);
+                    });
             } else {
                 callback(null, null);
             }
-        }
-    );
+        });
 };
 
-// Logger une action
 db.logAction = (userId, userType, action, ip, callback) => {
-    db.run(
-        `INSERT INTO logs_connexion (id_utilisateur, type_utilisateur, action, ip) 
-         VALUES (?, ?, ?, ?)`,
-        [userId, userType, action, ip],
-        callback
-    );
+    supabase.from('logs_connexion').insert({
+        id_utilisateur: userId,
+        type_utilisateur: userType,
+        action: action,
+        ip: ip
+    }).then(({ error }) => {
+        if (error) {
+            callback(error);
+        } else {
+            callback(null);
+        }
+    });
 };
+
+// === FONCTION UTILITAIRE : extraire le nom de la table ===
+function extractTableName(sql) {
+    const match = sql.match(/FROM\s+(\w+)/i);
+    if (match) return match[1];
+    const match2 = sql.match(/INTO\s+(\w+)/i);
+    if (match2) return match2[1];
+    return 'personnel';
+}
+
+function extractInsertValues(sql) {
+    const match = sql.match(/VALUES\s*\((.+)\)/i);
+    if (match) {
+        const values = match[1].split(',').map(v => v.trim().replace(/['"]/g, ''));
+        const obj = {};
+        values.forEach((v, i) => {
+            obj[`col_${i}`] = v;
+        });
+        return obj;
+    }
+    return {};
+}
 
 module.exports = db;
