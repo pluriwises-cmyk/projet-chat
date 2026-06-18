@@ -6,7 +6,7 @@ const db = require('../database/db');
 console.log('✅ Route auth.js chargée avec succès');
 const SECRET_KEY = process.env.JWT_SECRET || 'votre_secret_tres_long_et_securise_ici';
 
-// Route de connexion
+// ==================== ROUTE LOGIN ====================
 router.post('/login', (req, res) => {
     const { username, password, role } = req.body;
 
@@ -14,12 +14,10 @@ router.post('/login', (req, res) => {
         return res.status(400).json({ error: 'Identifiant, mot de passe et rôle requis' });
     }
 
-    // ✅ TOUS les rôles utilisent la table personnel
     const table = 'personnel';
     const idField = 'id_personnel';
     const roleField = 'poste';
 
-    // Liste des rôles autorisés
     const allowedRoles = [
         'medecin', 'infirmier', 'administratif', 
         'hotellerie', 'logistique', 'qualite', 'voyages',
@@ -74,17 +72,7 @@ router.post('/login', (req, res) => {
     });
 });
 
-// Routes temporaires (si encore utilisées)
-router.get('/setup', (req, res) => {
-    // Tu peux garder cette route si elle est encore utilisée
-    res.json({ message: 'Setup route' });
-});
-
-router.get('/seed', (req, res) => {
-    // Tu peux garder cette route si elle est encore utilisée
-    res.json({ message: 'Seed route' });
-});
-// AJOUTE CE CODE DANS TON FICHIER auth.js
+// ==================== ROUTE CHECK-PHONE (FUSIONNÉE) ====================
 router.post('/check-phone', (req, res) => {
     const { telephone } = req.body;
 
@@ -92,62 +80,57 @@ router.post('/check-phone', (req, res) => {
         return res.status(400).json({ error: 'Numéro de téléphone requis' });
     }
 
-    // 1. On cherche d'abord dans le PERSONNEL
-    const sqlPersonnel = "SELECT id_personnel, poste FROM personnel WHERE telephone = ?";
+    // 1. Chercher dans PERSONNEL (avec id, nom, prenom, poste)
+    const sqlPersonnel = "SELECT id_personnel, nom, prenom, poste FROM personnel WHERE telephone = ?";
     
     db.get(sqlPersonnel, [telephone], (err, user) => {
-        if (err) return res.status(500).json({ error: 'Erreur serveur' });
+        if (err) {
+            console.error('Erreur SQL personnel:', err);
+            return res.status(500).json({ error: 'Erreur serveur' });
+        }
 
         if (user) {
-            // C'est un personnel, on renvoie son rôle
-            return res.json({ found: true, type: 'personnel', role: user.poste });
+            return res.json({ 
+                found: true, 
+                type: 'personnel', 
+                role: user.poste,
+                id: user.id_personnel,
+                nom: user.nom,
+                prenom: user.prenom
+            });
         } 
         
-        // 2. Si pas trouvé, on cherche dans la table BENEFICIAIRE
-        // Utilisation de ta table correcte : "beneficiaire"
-        const sqlBeneficiaire = "SELECT id_beneficiaire FROM beneficiaire WHERE telephone = ?";
-        
+        // 2. Chercher dans BENEFICIAIRE
+        const sqlBeneficiaire = "SELECT id_beneficiaire, nom, prenom FROM beneficiaire WHERE telephone = ?";
         db.get(sqlBeneficiaire, [telephone], (err, benef) => {
-            if (err) return res.status(500).json({ error: 'Erreur serveur' });
+            if (err) {
+                console.error('Erreur SQL beneficiaire:', err);
+                return res.status(500).json({ error: 'Erreur serveur' });
+            }
             
             if (benef) {
-                // C'est un bénéficiaire (patient/touriste...)
-                return res.json({ found: true, type: 'patient' });
+                return res.json({ 
+                    found: true, 
+                    type: 'patient', 
+                    role: 'patient',
+                    id: benef.id_beneficiaire,
+                    nom: benef.nom,
+                    prenom: benef.prenom
+                });
             } else {
-                // Inconnu au bataillon
                 return res.json({ found: false });
             }
         });
     });
 });
-router.post('/check-phone', (req, res) => {
-    const { telephone } = req.body;
 
-    if (!telephone) return res.status(400).json({ error: 'Numéro requis' });
+// ==================== ROUTES TEMPORAIRES (si encore utilisées) ====================
+router.get('/setup', (req, res) => {
+    res.json({ message: 'Setup route' });
+});
 
-    // 1. Chercher dans PERSONNEL (avec la colonne 'poste')
-    const sqlPersonnel = "SELECT poste FROM personnel WHERE telephone = ?";
-    
-    db.get(sqlPersonnel, [telephone], (err, user) => {
-        if (err) return res.status(500).json({ error: 'Erreur serveur' });
-
-        if (user) {
-            // Le serveur renvoie le rôle EXACT trouvé dans la colonne 'poste'
-            return res.json({ found: true, type: 'personnel', role: user.poste });
-        } 
-        
-        // 2. Chercher dans BENEFICIAIRE
-        const sqlBeneficiaire = "SELECT id_beneficiaire FROM beneficiaire WHERE telephone = ?";
-        db.get(sqlBeneficiaire, [telephone], (err, benef) => {
-            if (err) return res.status(500).json({ error: 'Erreur serveur' });
-            
-            if (benef) {
-                return res.json({ found: true, type: 'patient' });
-            } else {
-                return res.json({ found: false });
-            }
-        });
-    });
+router.get('/seed', (req, res) => {
+    res.json({ message: 'Seed route' });
 });
 
 module.exports = router;
