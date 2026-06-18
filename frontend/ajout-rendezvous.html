@@ -45,17 +45,27 @@
 
     <script>
         async function chargerMedecins() {
-            try {
-                const medecins = await API.get('/personnel/medecins');
-                const select = document.getElementById('id_medecin');
-                select.innerHTML = '<option value="">Choisir un médecin</option>';
-                medecins.forEach(m => {
-                    select.innerHTML += `<option value="${m.id_personnel}">Dr. ${m.prenom} ${m.nom}</option>`;
-                });
-            } catch (e) {
-                console.error("Erreur chargement médecins", e);
-            }
+    try {
+        // Utiliser la route /personnel qui existe
+        const toutLePersonnel = await API.get('/personnel');
+        // Filtrer les médecins dans le frontend
+        const medecins = toutLePersonnel.filter(p => p.poste === 'medecin');
+        
+        const select = document.getElementById('id_medecin');
+        select.innerHTML = '<option value="">Sélectionner un médecin</option>';
+        
+        if (medecins.length === 0) {
+            select.innerHTML = '<option value="">Aucun médecin trouvé</option>';
+        } else {
+            medecins.forEach(m => {
+                select.innerHTML += `<option value="${m.id_personnel}">Dr. ${m.prenom} ${m.nom}</option>`;
+            });
         }
+    } catch (e) {
+        console.error('Erreur chargement médecins:', e);
+        document.getElementById('id_medecin').innerHTML = '<option value="">Erreur chargement</option>';
+    }
+}
         chargerMedecins();
 
         async function enregistrerRdv() {
