@@ -1,7 +1,7 @@
 {
   "name": "hopital-backend",
   "version": "1.0.0",
-  "description": "Backend Hôpital Saint-Jean",
+ "description": "Backend clinique hoteliere et actions touristique CHAT",
   "main": "app.js",
   "scripts": {
     "start": "node app.js",
