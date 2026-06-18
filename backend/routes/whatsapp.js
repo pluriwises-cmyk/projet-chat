@@ -80,18 +80,25 @@ router.post('/verify-code', (req, res) => {
                 return res.status(400).json({ error: 'Code expiré' });
             }
 
+            // --- CORRECTION : date au format ISO ---
+            const dateNow = new Date().toISOString();
+
+            console.log(`DEBUG: UPDATE id_validation: ${validation.id_validation} avec date: ${dateNow}`);
+
             db.run(
                 `UPDATE whatsapp_validation
-                 SET statut = 'valide', date_validation = NOW()
+                 SET statut = 'valide', date_validation = ?
                  WHERE id_validation = ?`,
-                [validation.id_validation],
-                (err) => {
+                [dateNow, validation.id_validation],
+                (err, result) => {
                     if (err) {
-                        console.error('Erreur update:', err);
+                        console.error('❌ ERREUR UPDATE:', err);
                         return res.status(500).json({ error: 'Erreur serveur' });
                     }
 
-                    // Vérifier dans personnel (médecins, infirmiers)
+                    console.log('✅ Update réussi');
+
+                    // --- Vérifier dans personnel (médecins, infirmiers) ---
                     db.get('SELECT * FROM personnel WHERE telephone = ?', [telephone], (err, personnel) => {
                         if (err) {
                             console.error('Erreur DB personnel:', err);
@@ -128,7 +135,7 @@ router.post('/verify-code', (req, res) => {
                             });
                         }
 
-                        // Vérifier dans beneficiaire (patients)
+                        // --- Vérifier dans beneficiaire (patients) ---
                         db.get('SELECT * FROM beneficiaire WHERE telephone = ? OR whatsapp = ?',
                             [telephone, telephone],
                             (err, beneficiaire) => {
