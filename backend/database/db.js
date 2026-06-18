@@ -1,7 +1,6 @@
 // backend/database/db.js
 const { createClient } = require('@supabase/supabase-js');
 
-// === CONFIGURATION ===
 const supabaseUrl = process.env.SUPABASE_URL || 'https://mtcumvngnalsozoufltk.supabase.co';
 const supabaseKey = process.env.SUPABASE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10Y3Vtdm5nbmFsc296b3VmbHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODM4NDcsImV4cCI6MjA5NzM1OTg0N30.lBiqoKoAuDgdiYoqeQT1W6Qc_4oycLfrpRzzeFR_Ht8';
 
@@ -10,25 +9,20 @@ console.log('✅ Connecté à Supabase (Mode Compatible SQLite)');
 
 const db = {};
 
-// ==========================================
-// FONCTIONS PRINCIPALES
-// ==========================================
-
-// === db.get : récupère une seule ligne ===
+// === db.get : Gestion intelligente pour Login (OR) et WHERE ===
 db.get = (sql, params, callback) => {
-    if (typeof params === 'function') {
-        callback = params;
-        params = [];
-    }
+    if (typeof params === 'function') { callback = params; params = []; }
     try {
         const tableName = extractTableName(sql);
         let query = supabase.from(tableName).select('*');
-        
-        const conditions = extractWhereConditions(sql);
-        conditions.forEach(cond => {
-            query = query.eq(cond.column, cond.value);
-        });
-        
+
+        if (sql.toUpperCase().includes('OR')) {
+            query = query.or(`email.eq.${params[0]},telephone.eq.${params[0]}`);
+        } else {
+            const conditions = extractWhereConditions(sql);
+            conditions.forEach(cond => { query = query.eq(cond.column, cond.value); });
+        }
+
         query.limit(1).then(({ data, error }) => {
             if (error) {
                 console.error('Erreur Supabase (get):', error);
@@ -36,9 +30,6 @@ db.get = (sql, params, callback) => {
             } else {
                 callback(null, data[0] || null);
             }
-        }).catch(err => {
-            console.error('Erreur db.get:', err);
-            callback(err, null);
         });
     } catch (err) {
         console.error('Erreur db.get:', err);
@@ -46,12 +37,9 @@ db.get = (sql, params, callback) => {
     }
 };
 
-// === db.all : récupère plusieurs lignes ===
+// === db.all : Récupération liste ===
 db.all = (sql, params, callback) => {
-    if (typeof params === 'function') {
-        callback = params;
-        params = [];
-    }
+    if (typeof params === 'function') { callback = params; params = []; }
     try {
         const tableName = extractTableName(sql);
         supabase.from(tableName).select('*').then(({ data, error }) => {
@@ -61,9 +49,6 @@ db.all = (sql, params, callback) => {
             } else {
                 callback(null, data);
             }
-        }).catch(err => {
-            console.error('Erreur db.all:', err);
-            callback(err, null);
         });
     } catch (err) {
         console.error('Erreur db.all:', err);
@@ -71,36 +56,26 @@ db.all = (sql, params, callback) => {
     }
 };
 
-// === db.run : exécute INSERT, UPDATE, DELETE ===
+// === db.run : INSERT, UPDATE, DELETE ===
 db.run = (sql, params, callback) => {
-    if (typeof params === 'function') {
-        callback = params;
-        params = [];
-    }
+    if (typeof params === 'function') { callback = params; params = []; }
     try {
         const tableName = extractTableName(sql);
         const sqlLower = sql.trim().toLowerCase();
 
         if (sqlLower.startsWith('insert')) {
-            const insertData = extractInsertData(sql);
-            supabase.from(tableName).insert(insertData).then(({ data, error }) => {
+            supabase.from(tableName).insert(extractInsertData(sql)).then(({ data, error }) => {
                 if (error) {
                     console.error('Erreur Supabase (run/insert):', error);
                     callback(error, null);
                 } else {
                     callback(null, { lastID: data?.[0]?.id || 0 });
                 }
-            }).catch(err => {
-                console.error('Erreur db.run (insert):', err);
-                callback(err, null);
             });
         } else if (sqlLower.startsWith('update')) {
-            const updateData = extractUpdateData(sql);
             const conditions = extractWhereConditions(sql);
-            let query = supabase.from(tableName).update(updateData);
-            conditions.forEach(cond => {
-                query = query.eq(cond.column, cond.value);
-            });
+            let query = supabase.from(tableName).update(extractUpdateData(sql));
+            conditions.forEach(c => { query = query.eq(c.column, c.value); });
             query.then(({ error }) => {
                 if (error) {
                     console.error('Erreur Supabase (run/update):', error);
@@ -108,16 +83,11 @@ db.run = (sql, params, callback) => {
                 } else {
                     callback(null, { changes: 1 });
                 }
-            }).catch(err => {
-                console.error('Erreur db.run (update):', err);
-                callback(err, null);
             });
         } else if (sqlLower.startsWith('delete')) {
             const conditions = extractWhereConditions(sql);
             let query = supabase.from(tableName).delete();
-            conditions.forEach(cond => {
-                query = query.eq(cond.column, cond.value);
-            });
+            conditions.forEach(c => { query = query.eq(c.column, c.value); });
             query.then(({ error }) => {
                 if (error) {
                     console.error('Erreur Supabase (run/delete):', error);
@@ -125,9 +95,6 @@ db.run = (sql, params, callback) => {
                 } else {
                     callback(null, { changes: 1 });
                 }
-            }).catch(err => {
-                console.error('Erreur db.run (delete):', err);
-                callback(err, null);
             });
         } else {
             callback(new Error('Requête non supportée'), null);
@@ -138,10 +105,7 @@ db.run = (sql, params, callback) => {
     }
 };
 
-// ==========================================
-// FONCTIONS WHATSAPP
-// ==========================================
-
+// === FONCTIONS WHATSAPP (inchangées) ===
 db.saveWhatsAppCode = (telephone, callback) => {
     const code = Math.floor(100000 + Math.random() * 900000).toString();
     const expiration = new Date();
@@ -205,10 +169,7 @@ db.logAction = (userId, userType, action, ip, callback) => {
     });
 };
 
-// ==========================================
-// FONCTIONS UTILITAIRES
-// ==========================================
-
+// === FONCTIONS UTILITAIRES ===
 function extractTableName(sql) {
     const match = sql.match(/(?:FROM|INTO|UPDATE|DELETE\s+FROM)\s+([a-zA-Z0-9_]+)/i);
     return match ? match[1] : 'personnel';
@@ -217,46 +178,30 @@ function extractTableName(sql) {
 function extractWhereConditions(sql) {
     const match = sql.match(/WHERE\s+(.+?)(?:\s+ORDER BY|\s+GROUP BY|\s+LIMIT|$)/i);
     if (!match) return [];
-    
-    const conditions = match[1].split(/AND|OR/i).map(c => c.trim());
-    return conditions.map(cond => {
-        const parts = cond.split('=');
-        if (parts.length === 2) {
-            return {
-                column: parts[0].trim(),
-                value: parts[1].trim().replace(/['"]/g, '')
-            };
-        }
-        return null;
-    }).filter(Boolean);
+    return match[1].split(/AND/i).map(c => {
+        const [column, value] = c.split('=').map(s => s.trim().replace(/['"]/g, ''));
+        return { column, value };
+    }).filter(c => c.column);
 }
 
 function extractInsertData(sql) {
     const columnsMatch = sql.match(/\((.*?)\)/);
     const valuesMatch = sql.match(/VALUES\s*\((.+)\)/i);
-    
     if (!columnsMatch || !valuesMatch) return {};
-
     const columns = columnsMatch[1].split(',').map(c => c.trim());
     const values = valuesMatch[1].split(',').map(v => v.trim().replace(/['"]/g, ''));
-
     const data = {};
-    columns.forEach((col, index) => {
-        if (values[index] !== undefined) {
-            data[col] = values[index];
-        }
-    });
+    columns.forEach((col, i) => data[col] = values[i]);
     return data;
 }
 
 function extractUpdateData(sql) {
     const match = sql.match(/SET\s+(.+?)(?:\s+WHERE|$)/i);
     if (!match) return {};
-    const pairs = match[1].split(',');
     const data = {};
-    pairs.forEach(p => {
-        const [key, val] = p.split('=').map(s => s.trim().replace(/['"]/g, ''));
-        data[key] = val;
+    match[1].split(',').forEach(p => {
+        const [k, v] = p.split('=').map(s => s.trim().replace(/['"]/g, ''));
+        data[k] = v;
     });
     return data;
 }
