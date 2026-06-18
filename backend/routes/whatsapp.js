@@ -9,7 +9,9 @@ function generateCode() {
     return Math.floor(100000 + Math.random() * 900000).toString();
 }
 
-// Demander un code
+// ==========================================
+// DEMANDER UN CODE (POST)
+// ==========================================
 router.post('/request-code', (req, res) => {
     console.log('📱 Demande de code reçue:', req.body);
     const { telephone } = req.body;
@@ -24,28 +26,37 @@ router.post('/request-code', (req, res) => {
 
     console.log(`✅ Code généré pour ${telephone}: ${code}`);
 
-    db.run('DELETE FROM whatsapp_validation WHERE telephone = ?', [telephone]);
-
-    db.run(
-        `INSERT INTO whatsapp_validation (telephone, code, date_envoi, date_expiration, statut, tentative)
-         VALUES (?, ?, datetime('now'), ?, 'en_attente', 0)`,
-        [telephone, code, dateExpiration.toISOString()],
-        function (err) {
-            if (err) {
-                console.error('Erreur insertion:', err);
-                return res.status(500).json({ error: 'Erreur serveur' });
-            }
-
-            res.json({
-                success: true,
-                message: 'Code envoyé',
-                code_dev: code
-            });
+    // 1. Supprimer les anciens codes pour ce téléphone
+    db.run('DELETE FROM whatsapp_validation WHERE telephone = ?', [telephone], (err) => {
+        if (err) {
+            console.error('Erreur suppression anciens codes:', err);
+            return res.status(500).json({ error: 'Erreur serveur' });
         }
-    );
+
+        // 2. Insérer le nouveau code
+        db.run(
+            `INSERT INTO whatsapp_validation (telephone, code, date_expiration, statut, tentative)
+             VALUES (?, ?, ?, 'en_attente', 0)`,
+            [telephone, code, dateExpiration.toISOString()],
+            function (err) {
+                if (err) {
+                    console.error('Erreur insertion:', err);
+                    return res.status(500).json({ error: 'Erreur serveur' });
+                }
+
+                res.json({
+                    success: true,
+                    message: 'Code envoyé',
+                    code_dev: code
+                });
+            }
+        );
+    });
 });
 
-// Vérifier le code
+// ==========================================
+// VÉRIFIER LE CODE (POST)
+// ==========================================
 router.post('/verify-code', (req, res) => {
     console.log('🔍 Vérification code reçue:', req.body);
     const { telephone, code } = req.body;
@@ -78,7 +89,7 @@ router.post('/verify-code', (req, res) => {
 
             db.run(
                 `UPDATE whatsapp_validation 
-                 SET statut = 'valide', date_validation = datetime('now')
+                 SET statut = 'valide', date_validation = NOW()
                  WHERE id_validation = ?`,
                 [validation.id_validation],
                 (err) => {
