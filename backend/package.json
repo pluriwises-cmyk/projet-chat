@@ -4,12 +4,12 @@
   "description": "Backend Hôpital Saint-Jean",
   "main": "app.js",
   "scripts": {
-    
     "start": "node app.js",
     "dev": "nodemon app.js",
     "postinstall": "npm rebuild sqlite3"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.39.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
