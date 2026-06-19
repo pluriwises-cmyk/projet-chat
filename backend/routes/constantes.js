@@ -6,7 +6,7 @@ const db = require('../database/db');
 router.get('/', (req, res) => {
     const query = `
         SELECT c.*, b.nom, b.prenom 
-        FROM constantes c
+        FROM constante c
         LEFT JOIN beneficiaire b ON c.id_beneficiaire = b.id_beneficiaire
         ORDER BY c.date_prise DESC
     `;
