@@ -19,7 +19,7 @@ const db = {};
 // ==========================================
 // 2. FONCTION DE GESTION DES ERREURS
 // ==========================================
-const handleSupabaseError = (err, callback, customMessage) => {
+const handleSupabaseError = (err, callback) => {
     console.error('❌ Erreur Supabase:', err);
     if (callback) callback(err, null);
 };
@@ -43,7 +43,7 @@ db.get = (sql, params, callback) => {
 
         let query = supabase.from(tableName).select('*');
 
-        // ✅ Gestion du OR pour auth (email OR telephone)
+        // Gestion du OR pour auth (email OR telephone)
         const isAuthTable = ['personnel', 'beneficiaire'].includes(tableName);
         if (sql.toUpperCase().includes('OR') && isAuthTable && params.length > 0) {
             query = query.or(`email.eq.${params[0]},telephone.eq.${params[0]}`);
@@ -56,15 +56,29 @@ db.get = (sql, params, callback) => {
             });
         }
 
-        // ✅ Utilisation de maybeSingle() au lieu de single()
-        // = plus robuste : retourne null si aucun résultat
-        query.maybeSingle().then(({ data, error }) => {
-            if (error) {
-                handleSupabaseError(error, callback);
-            } else {
+        // ✅ Détection du LIMIT 1 ou .single()
+        const hasLimit1 = /LIMIT\s+1/i.test(sql);
+        const hasSingle = /\.single\(\)/i.test(sql);
+
+        if (hasLimit1 || hasSingle) {
+            // Retourne un seul résultat ou null
+            query.maybeSingle().then(({ data, error }) => {
+                if (error) {
+                    console.error('❌ Erreur db.get:', error);
+                    return callback(error, null);
+                }
                 callback(null, data || null);
-            }
-        });
+            });
+        } else {
+            // Retourne toujours un tableau
+            query.then(({ data, error }) => {
+                if (error) {
+                    console.error('❌ Erreur db.get:', error);
+                    return callback(error, null);
+                }
+                callback(null, data || []);
+            });
+        }
     } catch (err) {
         console.error('❌ Erreur db.get:', err);
         callback(err, null);
@@ -86,7 +100,7 @@ db.all = (sql, params, callback) => {
 
         let query = supabase.from(tableName).select('*');
 
-        // ✅ Support ORDER BY
+        // Support ORDER BY
         const orderMatch = sql.match(/ORDER BY\s+([a-zA-Z0-9_]+)\s*(DESC|ASC)?/i);
         if (orderMatch) {
             const column = orderMatch[1];
@@ -94,7 +108,7 @@ db.all = (sql, params, callback) => {
             query = query.order(column, { ascending });
         }
 
-        // ✅ Support LIMIT
+        // Support LIMIT
         const limitMatch = sql.match(/LIMIT\s+(\d+)/i);
         if (limitMatch) {
             query = query.limit(parseInt(limitMatch[1]));
@@ -140,7 +154,6 @@ db.run = (sql, params, callback) => {
                 if (error) {
                     handleSupabaseError(error, callback);
                 } else {
-                    // ✅ Détection automatique du nom de l'ID
                     const firstItem = data?.[0] || {};
                     const idKey = Object.keys(firstItem).find(k => k.includes('id')) || 'id';
                     const lastID = firstItem[idKey] || 0;
@@ -159,7 +172,6 @@ db.run = (sql, params, callback) => {
 
             let query = supabase.from(tableName).update(updateData);
             
-            // Appliquer les conditions
             const paramStart = Object.keys(updateData).length;
             conditions.forEach((cond, i) => {
                 const paramIndex = paramStart + i;
@@ -257,7 +269,6 @@ db.verifyWhatsAppCode = (telephone, code, callback) => {
                 callback(error);
             } else if (data && data.length > 0) {
                 const row = data[0];
-                // Mettre à jour le statut
                 supabase.from('whatsapp_validation')
                     .update({ 
                         statut: 'valide', 
@@ -292,7 +303,7 @@ db.logAction = (userId, userType, action, ip, callback) => {
 };
 
 // ==========================================
-// 5. UTILITAIRES DE PARSING (AMÉLIORÉS)
+// 5. UTILITAIRES DE PARSING
 // ==========================================
 
 function extractTableName(sql) {
@@ -304,10 +315,8 @@ function extractWhereConditions(sql) {
     const match = sql.match(/WHERE\s+(.+?)(?:\s+ORDER BY|\s+GROUP BY|\s+LIMIT|$)/i);
     if (!match) return [];
     
-    // Gérer les conditions multiples (AND)
     const parts = match[1].split(/\s+AND\s+/i);
     return parts.map(part => {
-        // Gérer les comparaisons : =, >=, <=, LIKE, etc.
         const compareMatch = part.match(/([a-zA-Z0-9_]+)\s*(=|>=|<=|>|<|LIKE)\s*(.+)/i);
         if (compareMatch) {
             const column = compareMatch[1].trim();
@@ -320,7 +329,6 @@ function extractWhereConditions(sql) {
 }
 
 function extractInsertKeys(sql) {
-    // Trouver la première parenthèse après INSERT INTO table
     const match = sql.match(/INSERT\s+INTO\s+[a-zA-Z0-9_]+\s*\(([^)]+)\)/i);
     if (!match) return [];
     return match[1].split(',').map(s => s.trim());
