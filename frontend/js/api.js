@@ -24,56 +24,6 @@ const API = {
         }
     },
 
-    // ✅ CORRECTION : Utilisation de l'URL REST correcte
-    async getConsultations(medecinId) {
-        if (!medecinId) return [];
-        return this.get(`/consultations/medecin/${medecinId}`);
-    },
-
-    // ✅ CORRECTION : Utilisation de l'URL REST correcte
-    async getRendezVous(medecinId) {
-        if (!medecinId) return [];
-        return this.get(`/rendez-vous/medecin/${medecinId}`);
-    },
-
-    // ✅ CORRECTION : Utilisation de l'URL REST correcte
-    async getStatsMedecin(medecinId) {
-        if (!medecinId) return {};
-        return this.get(`/statistiques/medecin/${medecinId}`);
-    },
-
-    // ============================================
-    // AUTRES MÉTHODES (inchangées)
-    // ============================================
-
-    async getStats() {
-        return this.get('/statistiques/dashboard');
-    },
-
-    async getPatients() {
-        return this.get('/beneficiaires');
-    },
-
-    async getConstantes() {
-        return this.get('/constante');
-    },
-
-    async getChambres() {
-        return this.get('/chambres');
-    },
-
-    async getStocks() {
-        return this.get('/stocks');
-    },
-
-    async getQualite() {
-        return this.get('/qualite/indicateurs');
-    },
-
-    async getFactures() {
-        return this.get('/factures');
-    },
-
     async post(endpoint, data) {
         try {
             const response = await fetch(`${this.baseURL}${endpoint}`, {
@@ -89,6 +39,79 @@ const API = {
         }
     },
 
+    // ============================================
+    // CONSULTATIONS
+    // ============================================
+    async getConsultations(medecinId) {
+        if (!medecinId) return [];
+        return this.get(`/consultations/medecin/${medecinId}`);
+    },
+
+    // ============================================
+    // RENDEZ-VOUS
+    // ============================================
+    async getRendezVous(medecinId) {
+        if (!medecinId) return [];
+        return this.get(`/rendez-vous/medecin/${medecinId}`);
+    },
+
+    // ============================================
+    // STATISTIQUES
+    // ============================================
+    async getStats() {
+        return this.get('/statistiques/dashboard');
+    },
+
+    async getStatsMedecin(medecinId) {
+        if (!medecinId) return {};
+        return this.get(`/stats/medecin/${medecinId}`);
+    },
+
+    // ============================================
+    // PATIENTS (Bénéficiaires)
+    // ============================================
+    async getPatients() {
+        return this.get('/beneficiaires');
+    },
+
+    // ============================================
+    // CONSTANTES
+    // ============================================
+    async getConstantes() {
+        return this.get('/constante');
+    },
+
+    // ============================================
+    // CHAMBRES
+    // ============================================
+    async getChambres() {
+        return this.get('/chambres');
+    },
+
+    // ============================================
+    // STOCKS
+    // ============================================
+    async getStocks() {
+        return this.get('/stocks');
+    },
+
+    // ============================================
+    // QUALITÉ
+    // ============================================
+    async getQualite() {
+        return this.get('/qualite/indicateurs');
+    },
+
+    // ============================================
+    // FACTURES
+    // ============================================
+    async getFactures() {
+        return this.get('/factures');
+    },
+
+    // ============================================
+    // UTILITAIRES
+    // ============================================
     logout() {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
