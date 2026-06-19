@@ -2,13 +2,24 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const db = require('./database/db');
+const { createClient } = require('@supabase/supabase-js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const authRoutes = require('./routes/auth');
 
-// Middlewares
+// ============================================
+// CONFIGURATION SUPABASE
+// ============================================
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY
+);
+console.log('✅ Connexion Supabase établie');
+
+// ============================================
+// MIDDLEWARES
+// ============================================
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -17,18 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../frontend')));
 
 // ===== INITIALISATION =====
-const initDatabase = () => {
-    console.log('🔄 Initialisation de la base...');
-    db.run(`ALTER TABLE personnel ADD COLUMN mot_de_passe TEXT`, (err) => {
-        if (err && !err.message.includes('duplicate column')) {
-            console.error('❌ Erreur ALTER TABLE:', err.message);
-        } else {
-            console.log('✅ Vérification/Ajout colonne mot_de_passe terminée.');
-        }
-    });
-};
-
-setTimeout(initDatabase, 2000);
+console.log('✅ Base de données prête');
 
 // ============================================
 // ROUTES API
@@ -45,11 +45,17 @@ app.use('/api/prescriptions', require('./routes/prescriptions'));
 app.use('/api/rendez-vous', require('./routes/rendezVous'));
 
 // Routes infirmier
-app.use('/api/constantes', require('./routes/constantes'));   // ✅ Pluriel
-app.use('/api/constante', require('./routes/constantes'));    // ✅ Alias singulier pour le front
+app.use('/api/constantes', require('./routes/constantes'));
+app.use('/api/constante', require('./routes/constantes'));
 app.use('/api/soins', require('./routes/soins'));
 app.use('/api/medicaments', require('./routes/medicaments'));
 app.use('/api/planning', require('./routes/planning'));
+
+// Routes administratif
+app.use('/api/admissions', require('./routes/admissions'));
+app.use('/api/factures', require('./routes/factures'));
+app.use('/api/dossiers-medicaux', require('./routes/dossiersMedicaux'));
+app.use('/api/personnel', require('./routes/personnel'));
 
 // Routes hôtellerie
 app.use('/api/chambres', require('./routes/chambres'));
@@ -67,13 +73,9 @@ app.use('/api/courses', require('./routes/courses'));
 app.use('/api/indicateurs-qualite', require('./routes/indicateursQualite'));
 
 // Routes direction
-app.use('/api/factures', require('./routes/factures'));
-app.use('/api/admissions', require('./routes/admissions'));
-app.use('/api/dossiers-medicaux', require('./routes/dossiersMedicaux'));
 app.use('/api/rapports', require('./routes/rapports'));
 
 // Routes paramètres
-app.use('/api/personnel', require('./routes/personnel'));
 app.use('/api/parametres', require('./routes/parametres'));
 app.use('/api/projets', require('./routes/projets'));
 
@@ -88,33 +90,59 @@ app.use('/api/documents', require('./routes/documents'));
 // Routes stats (alias)
 app.use('/api/stats', require('./routes/stats'));
 
-// ===== STATISTIQUES MÉDECIN (Route directe) =====
-app.get('/api/stats/medecin/:id', (req, res) => {
+// ============================================
+// STATISTIQUES MÉDECIN (Version Supabase)
+// ============================================
+app.get('/api/stats/medecin/:id', async (req, res) => {
     const id = req.params.id;
     const today = new Date().toISOString().split('T')[0];
 
-    db.get(`SELECT COUNT(*) as count FROM consultation WHERE id_medecin = ? AND date_heure LIKE ?`, [id, `${today}%`], (err, cons) => {
-        if (err) return res.status(500).json({ error: err.message });
-        
-        db.get(`SELECT COUNT(DISTINCT id_beneficiaire) as count FROM consultation WHERE id_medecin = ?`, [id], (err, pat) => {
-            if (err) return res.status(500).json({ error: err.message });
-            
-            db.get(`SELECT COUNT(*) as count FROM rendez_vous WHERE id_medecin = ? AND date_rdv LIKE ?`, [id, `${today}%`], (err, rdvJ) => {
-                if (err) return res.status(500).json({ error: err.message });
-                
-                db.get(`SELECT COUNT(*) as count FROM rendez_vous WHERE id_medecin = ? AND statut = 'en_attente'`, [id], (err, rdvA) => {
-                    if (err) return res.status(500).json({ error: err.message });
-                    
-                    res.json({
-                        consultations_jour: cons ? cons.count : 0,
-                        patients_total: pat ? pat.count : 0,
-                        rdv_jour: rdvJ ? rdvJ.count : 0,
-                        rdv_attente: rdvA ? rdvA.count : 0
-                    });
-                });
-            });
+    if (!id || isNaN(id)) {
+        return res.status(400).json({ error: "ID médecin invalide" });
+    }
+
+    try {
+        // Exécution en parallèle
+        const [consultationsJour, patientsTotal, rdvJour, rdvAttente] = await Promise.all([
+            // Consultations du jour
+            supabase
+                .from('consultation')
+                .select('*', { count: 'exact', head: true })
+                .eq('id_medecin', id)
+                .gte('date_heure', today),
+
+            // Patients distincts
+            supabase
+                .from('consultation')
+                .select('id_beneficiaire', { count: 'exact', head: true })
+                .eq('id_medecin', id),
+
+            // Rendez-vous du jour
+            supabase
+                .from('rendez_vous')
+                .select('*', { count: 'exact', head: true })
+                .eq('id_medecin', id)
+                .gte('date_rdv', today),
+
+            // Rendez-vous en attente
+            supabase
+                .from('rendez_vous')
+                .select('*', { count: 'exact', head: true })
+                .eq('id_medecin', id)
+                .eq('statut', 'en_attente')
+        ]);
+
+        res.json({
+            consultations_jour: consultationsJour.count || 0,
+            patients_total: patientsTotal.count || 0,
+            rdv_jour: rdvJour.count || 0,
+            rdv_attente: rdvAttente.count || 0
         });
-    });
+
+    } catch (err) {
+        console.error('❌ Erreur stats médecin:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ============================================
