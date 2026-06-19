@@ -1,284 +1,295 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../database/db');
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY
+);
+
+console.log('✅ Route constantes.js chargée avec Supabase');
 
 // ============================================
-// GET Toutes les constantes
+// GET Toutes les constantes (avec jointure patient)
 // ============================================
-router.get('/', (req, res) => {
-    const query = `
-        SELECT 
-            constante.id_constante,
-            constante.id_beneficiaire,
-            constante.date_prise,
-            constante.tension,
-            constante.pouls,
-            constante.temperature,
-            constante.saturation,
-            constante.chambre,
-            beneficiaire.nom as patient_nom,
-            beneficiaire.prenom as patient_prenom
-        FROM constante
-        LEFT JOIN beneficiaire ON constante.id_beneficiaire = beneficiaire.id_beneficiaire
-        ORDER BY constante.date_prise DESC
-    `;
-    
-    db.all(query, [], (err, rows) => {
-        if (err) {
-            console.error('Erreur GET constantes:', err);
-            return res.status(500).json({ error: err.message });
-        }
-        res.json(rows || []);
-    });
+router.get('/', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('constante')
+            .select(`
+                id_constante,
+                id_beneficiaire,
+                date_prise,
+                tension,
+                pouls,
+                temperature,
+                saturation,
+                chambre,
+                beneficiaire (nom, prenom)
+            `)
+            .order('date_prise', { ascending: false });
+
+        if (error) throw error;
+
+        // Transformation pour garder la même structure que ton front attend
+        const result = data.map(c => ({
+            id_constante: c.id_constante,
+            id_beneficiaire: c.id_beneficiaire,
+            date_prise: c.date_prise,
+            tension: c.tension,
+            pouls: c.pouls,
+            temperature: c.temperature,
+            saturation: c.saturation,
+            chambre: c.chambre,
+            patient_nom: c.beneficiaire?.nom || null,
+            patient_prenom: c.beneficiaire?.prenom || null
+        }));
+
+        res.json(result);
+    } catch (err) {
+        console.error('❌ Erreur GET constantes:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ============================================
 // GET Constantes d'aujourd'hui
 // ============================================
-router.get('/aujourdhui', (req, res) => {
-    const query = `
-        SELECT 
-            constante.id_constante,
-            constante.id_beneficiaire,
-            constante.date_prise,
-            constante.tension,
-            constante.pouls,
-            constante.temperature,
-            constante.saturation,
-            constante.chambre,
-            beneficiaire.nom as patient_nom,
-            beneficiaire.prenom as patient_prenom
-        FROM constante
-        LEFT JOIN beneficiaire ON constante.id_beneficiaire = beneficiaire.id_beneficiaire
-        WHERE DATE(constante.date_prise) = CURRENT_DATE
-        ORDER BY constante.date_prise DESC
-    `;
-    
-    db.all(query, [], (err, rows) => {
-        if (err) {
-            console.error('Erreur GET constantes aujourd\'hui:', err);
-            return res.status(500).json({ error: err.message });
-        }
-        res.json(rows || []);
-    });
+router.get('/aujourdhui', async (req, res) => {
+    try {
+        const today = new Date();
+        const startOfDay = new Date(today);
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date(today);
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const { data, error } = await supabase
+            .from('constante')
+            .select(`
+                id_constante,
+                id_beneficiaire,
+                date_prise,
+                tension,
+                pouls,
+                temperature,
+                saturation,
+                chambre,
+                beneficiaire (nom, prenom)
+            `)
+            .gte('date_prise', startOfDay.toISOString())
+            .lt('date_prise', endOfDay.toISOString())
+            .order('date_prise', { ascending: false });
+
+        if (error) throw error;
+
+        const result = data.map(c => ({
+            ...c,
+            patient_nom: c.beneficiaire?.nom || null,
+            patient_prenom: c.beneficiaire?.prenom || null,
+            beneficiaire: undefined
+        }));
+
+        res.json(result);
+    } catch (err) {
+        console.error('❌ Erreur GET constantes aujourd\'hui:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ============================================
 // GET Constantes d'un patient spécifique
 // ============================================
-router.get('/patient/:id', (req, res) => {
+router.get('/patient/:id', async (req, res) => {
     const patientId = req.params.id;
-    
     if (!patientId || isNaN(patientId)) {
         return res.status(400).json({ error: "ID patient invalide" });
     }
-    
-    const query = `
-        SELECT 
-            constante.id_constante,
-            constante.id_beneficiaire,
-            constante.date_prise,
-            constante.tension,
-            constante.pouls,
-            constante.temperature,
-            constante.saturation,
-            constante.chambre
-        FROM constante
-        WHERE constante.id_beneficiaire = $1
-        ORDER BY constante.date_prise DESC
-    `;
-    
-    db.all(query, [patientId], (err, rows) => {
-        if (err) {
-            console.error('Erreur GET constantes patient:', err);
-            return res.status(500).json({ error: err.message });
-        }
-        res.json(rows || []);
-    });
+
+    try {
+        const { data, error } = await supabase
+            .from('constante')
+            .select('*')
+            .eq('id_beneficiaire', patientId)
+            .order('date_prise', { ascending: false });
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (err) {
+        console.error('❌ Erreur GET constantes patient:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ============================================
 // GET Une constante par ID
 // ============================================
-router.get('/:id', (req, res) => {
+router.get('/:id', async (req, res) => {
     const id = req.params.id;
-    
     if (!id || isNaN(id)) {
         return res.status(400).json({ error: "ID invalide" });
     }
-    
-    const query = `
-        SELECT 
-            constante.id_constante,
-            constante.id_beneficiaire,
-            constante.date_prise,
-            constante.tension,
-            constante.pouls,
-            constante.temperature,
-            constante.saturation,
-            constante.chambre,
-            beneficiaire.nom as patient_nom,
-            beneficiaire.prenom as patient_prenom
-        FROM constante
-        LEFT JOIN beneficiaire ON constante.id_beneficiaire = beneficiaire.id_beneficiaire
-        WHERE constante.id_constante = $1
-    `;
-    
-    db.get(query, [id], (err, row) => {
-        if (err) {
-            console.error('Erreur GET constante:', err);
-            return res.status(500).json({ error: err.message });
-        }
-        if (!row) {
+
+    try {
+        const { data, error } = await supabase
+            .from('constante')
+            .select(`
+                id_constante,
+                id_beneficiaire,
+                date_prise,
+                tension,
+                pouls,
+                temperature,
+                saturation,
+                chambre,
+                beneficiaire (nom, prenom)
+            `)
+            .eq('id_constante', id)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (!data) {
             return res.status(404).json({ error: "Constante non trouvée" });
         }
-        res.json(row);
-    });
+
+        const result = {
+            ...data,
+            patient_nom: data.beneficiaire?.nom || null,
+            patient_prenom: data.beneficiaire?.prenom || null,
+            beneficiaire: undefined
+        };
+
+        res.json(result);
+    } catch (err) {
+        console.error('❌ Erreur GET constante:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ============================================
-// POST Ajouter des constantes vitales
+// POST Ajouter des constantes
 // ============================================
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
     const { id_beneficiaire, tension, pouls, temperature, saturation, chambre } = req.body;
-    
+
     if (!id_beneficiaire) {
         return res.status(400).json({ error: "ID bénéficiaire requis" });
     }
 
-    // Vérifier que le patient existe
-    db.get('SELECT id_beneficiaire FROM beneficiaire WHERE id_beneficiaire = $1', 
-        [id_beneficiaire], 
-        (err, patient) => {
-            if (err) {
-                console.error('Erreur vérification patient:', err);
-                return res.status(500).json({ error: err.message });
-            }
-            if (!patient) {
-                return res.status(404).json({ error: "Patient non trouvé" });
-            }
+    try {
+        // Vérifier que le patient existe
+        const { data: patient, error: patientError } = await supabase
+            .from('beneficiaire')
+            .select('id_beneficiaire')
+            .eq('id_beneficiaire', id_beneficiaire)
+            .maybeSingle();
 
-            const query = `
-                INSERT INTO constante 
-                (id_beneficiaire, tension, pouls, temperature, saturation, chambre, date_prise)
-                VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP)
-                RETURNING id_constante
-            `;
-
-            db.get(query, [
-                id_beneficiaire, 
-                tension || '', 
-                pouls || null, 
-                temperature || null, 
-                saturation || null, 
-                chambre || ''
-            ], (err, result) => {
-                if (err) {
-                    console.error('Erreur POST constante:', err);
-                    return res.status(500).json({ error: err.message });
-                }
-                res.status(201).json({ 
-                    id: result.id_constante, 
-                    message: "Constante enregistrée avec succès" 
-                });
-            });
+        if (patientError || !patient) {
+            return res.status(404).json({ error: "Patient non trouvé" });
         }
-    );
+
+        const { data, error } = await supabase
+            .from('constante')
+            .insert([{
+                id_beneficiaire,
+                tension: tension || '',
+                pouls: pouls || null,
+                temperature: temperature || null,
+                saturation: saturation || null,
+                chambre: chambre || '',
+                date_prise: new Date().toISOString()
+            }])
+            .select();
+
+        if (error) throw error;
+
+        res.status(201).json({
+            success: true,
+            id: data[0].id_constante,
+            message: "Constante enregistrée avec succès"
+        });
+    } catch (err) {
+        console.error('❌ Erreur POST constante:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ============================================
 // PUT Modifier des constantes
 // ============================================
-router.put('/:id', (req, res) => {
+router.put('/:id', async (req, res) => {
     const id = req.params.id;
     const { tension, pouls, temperature, saturation, chambre } = req.body;
-    
+
     if (!id || isNaN(id)) {
         return res.status(400).json({ error: "ID invalide" });
     }
-    
-    // Construire la liste des champs à mettre à jour
-    let updates = [];
-    let values = [];
-    let paramIndex = 1;
-    
-    if (tension !== undefined) { 
-        updates.push(`tension = $${paramIndex++}`); 
-        values.push(tension); 
-    }
-    if (pouls !== undefined) { 
-        updates.push(`pouls = $${paramIndex++}`); 
-        values.push(pouls); 
-    }
-    if (temperature !== undefined) { 
-        updates.push(`temperature = $${paramIndex++}`); 
-        values.push(temperature); 
-    }
-    if (saturation !== undefined) { 
-        updates.push(`saturation = $${paramIndex++}`); 
-        values.push(saturation); 
-    }
-    if (chambre !== undefined) { 
-        updates.push(`chambre = $${paramIndex++}`); 
-        values.push(chambre); 
-    }
-    
-    if (updates.length === 0) {
-        return res.status(400).json({ error: "Aucune donnée à modifier" });
-    }
-    
-    values.push(id);
-    const query = `
-        UPDATE constante 
-        SET ${updates.join(', ')}
-        WHERE id_constante = $${paramIndex}
-        RETURNING id_constante
-    `;
-    
-    db.get(query, values, (err, result) => {
-        if (err) {
-            console.error('Erreur UPDATE constante:', err);
-            return res.status(500).json({ error: err.message });
+
+    try {
+        const updates = {};
+        if (tension !== undefined) updates.tension = tension;
+        if (pouls !== undefined) updates.pouls = pouls;
+        if (temperature !== undefined) updates.temperature = temperature;
+        if (saturation !== undefined) updates.saturation = saturation;
+        if (chambre !== undefined) updates.chambre = chambre;
+
+        if (Object.keys(updates).length === 0) {
+            return res.status(400).json({ error: "Aucune donnée à modifier" });
         }
-        if (!result) {
+
+        const { data, error } = await supabase
+            .from('constante')
+            .update(updates)
+            .eq('id_constante', id)
+            .select();
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
             return res.status(404).json({ error: "Constante non trouvée" });
         }
-        res.json({ 
+
+        res.json({
+            success: true,
             message: "Constantes modifiées avec succès",
-            id: result.id_constante
+            id: data[0].id_constante
         });
-    });
+    } catch (err) {
+        console.error('❌ Erreur PUT constante:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ============================================
 // DELETE Supprimer des constantes
 // ============================================
-router.delete('/:id', (req, res) => {
+router.delete('/:id', async (req, res) => {
     const id = req.params.id;
-    
     if (!id || isNaN(id)) {
         return res.status(400).json({ error: "ID invalide" });
     }
-    
-    const query = `
-        DELETE FROM constante 
-        WHERE id_constante = $1
-        RETURNING id_constante
-    `;
-    
-    db.get(query, [id], (err, result) => {
-        if (err) {
-            console.error('Erreur DELETE constante:', err);
-            return res.status(500).json({ error: err.message });
-        }
-        if (!result) {
+
+    try {
+        const { data, error } = await supabase
+            .from('constante')
+            .delete()
+            .eq('id_constante', id)
+            .select();
+
+        if (error) throw error;
+
+        if (!data || data.length === 0) {
             return res.status(404).json({ error: "Constante non trouvée" });
         }
-        res.json({ 
+
+        res.json({
+            success: true,
             message: "Constantes supprimées avec succès",
-            id: result.id_constante
+            id: data[0].id_constante
         });
-    });
+    } catch (err) {
+        console.error('❌ Erreur DELETE constante:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 module.exports = router;
