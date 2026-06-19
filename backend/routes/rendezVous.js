@@ -3,16 +3,16 @@ const router = express.Router();
 const db = require('../database/db');
 
 // ============================================
-// GET Tous les rendez-vous (avec ordre)
+// GET Tous les rendez-vous
 // ============================================
 router.get('/', (req, res) => {
     const query = `
-        SELECT r.*, 
+        SELECT rendez_vous.*, 
                b.nom as patient_nom, 
                b.prenom as patient_prenom
-        FROM rendez_vous r
-        LEFT JOIN beneficiaire b ON r.id_beneficiaire = b.id_beneficiaire
-        ORDER BY r.date_rdv DESC
+        FROM rendez_vous
+        LEFT JOIN beneficiaire b ON rendez_vous.id_beneficiaire = b.id_beneficiaire
+        ORDER BY rendez_vous.date_rdv DESC
     `;
     
     db.all(query, [], (err, rows) => {
@@ -25,18 +25,17 @@ router.get('/', (req, res) => {
 });
 
 // ============================================
-// GET Rendez-vous d'aujourd'hui (POSTGRESQL FIX)
+// GET Rendez-vous d'aujourd'hui
 // ============================================
 router.get('/aujourdhui', (req, res) => {
-    // ✅ PostgreSQL : CURRENT_DATE au lieu de DATE('now')
     const query = `
-        SELECT r.*, 
+        SELECT rendez_vous.*, 
                b.nom as patient_nom, 
                b.prenom as patient_prenom
-        FROM rendez_vous r
-        LEFT JOIN beneficiaire b ON r.id_beneficiaire = b.id_beneficiaire
-        WHERE DATE(r.date_rdv) = CURRENT_DATE
-        ORDER BY r.date_rdv ASC
+        FROM rendez_vous
+        LEFT JOIN beneficiaire b ON rendez_vous.id_beneficiaire = b.id_beneficiaire
+        WHERE DATE(rendez_vous.date_rdv) = CURRENT_DATE
+        ORDER BY rendez_vous.date_rdv ASC
     `;
     
     db.all(query, [], (err, rows) => {
@@ -52,20 +51,20 @@ router.get('/aujourdhui', (req, res) => {
 // GET Rendez-vous d'une date spécifique
 // ============================================
 router.get('/date/:date', (req, res) => {
-    const date = req.params.date; // Format: YYYY-MM-DD
+    const date = req.params.date;
     
     if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         return res.status(400).json({ error: "Format de date invalide. Utilisez YYYY-MM-DD" });
     }
     
     const query = `
-        SELECT r.*, 
+        SELECT rendez_vous.*, 
                b.nom as patient_nom, 
                b.prenom as patient_prenom
-        FROM rendez_vous r
-        LEFT JOIN beneficiaire b ON r.id_beneficiaire = b.id_beneficiaire
-        WHERE DATE(r.date_rdv) = $1
-        ORDER BY r.date_rdv ASC
+        FROM rendez_vous
+        LEFT JOIN beneficiaire b ON rendez_vous.id_beneficiaire = b.id_beneficiaire
+        WHERE DATE(rendez_vous.date_rdv) = $1
+        ORDER BY rendez_vous.date_rdv ASC
     `;
     
     db.all(query, [date], (err, rows) => {
@@ -75,81 +74,6 @@ router.get('/date/:date', (req, res) => {
         }
         res.json(rows || []);
     });
-});
-
-// ============================================
-// POST Ajouter un rendez-vous (UNIQUE)
-// ============================================
-router.post('/', (req, res) => {
-    const { id_beneficiaire, id_medecin, date_rdv, motif } = req.body;
-    
-    // Validation
-    if (!id_beneficiaire || !id_medecin || !date_rdv) {
-        return res.status(400).json({ 
-            error: "Tous les champs sont requis",
-            details: {
-                id_beneficiaire: !!id_beneficiaire,
-                id_medecin: !!id_medecin,
-                date_rdv: !!date_rdv
-            }
-        });
-    }
-    
-    // Vérifier que le patient existe (PostgreSQL)
-    db.get('SELECT id_beneficiaire FROM beneficiaire WHERE id_beneficiaire = $1', 
-        [id_beneficiaire], 
-        (err, patient) => {
-            if (err) {
-                console.error('Erreur vérification patient:', err);
-                return res.status(500).json({ error: err.message });
-            }
-            if (!patient) {
-                return res.status(404).json({ error: "Patient non trouvé" });
-            }
-            
-            // Vérifier que le médecin existe
-            db.get('SELECT id_medecin FROM medecin WHERE id_medecin = $1', 
-                [id_medecin], 
-                (err, medecin) => {
-                    if (err) {
-                        console.error('Erreur vérification médecin:', err);
-                        return res.status(500).json({ error: err.message });
-                    }
-                    if (!medecin) {
-                        return res.status(404).json({ error: "Médecin non trouvé" });
-                    }
-                    
-                    // Insertion du rendez-vous
-                    const query = `
-                        INSERT INTO rendez_vous 
-                        (id_beneficiaire, id_medecin, date_rdv, motif, statut)
-                        VALUES ($1, $2, $3, $4, 'planifie')
-                        RETURNING id_rendez_vous
-                    `;
-                    
-                    db.get(query, [id_beneficiaire, id_medecin, date_rdv, motif || ''], (err, result) => {
-                        if (err) {
-                            console.error('Erreur insertion rendez-vous:', err);
-                            
-                            // Détecter les conflits de contrainte
-                            if (err.message.includes('UNIQUE constraint')) {
-                                return res.status(409).json({ 
-                                    error: "Ce créneau est déjà pris pour ce médecin" 
-                                });
-                            }
-                            
-                            return res.status(500).json({ error: err.message });
-                        }
-                        
-                        res.status(201).json({ 
-                            id: result.id_rendez_vous, 
-                            message: "Rendez-vous ajouté avec succès" 
-                        });
-                    });
-                }
-            );
-        }
-    );
 });
 
 // ============================================
@@ -163,13 +87,13 @@ router.get('/patient/:id', (req, res) => {
     }
     
     const query = `
-        SELECT r.*, 
+        SELECT rendez_vous.*, 
                b.nom as patient_nom, 
                b.prenom as patient_prenom
-        FROM rendez_vous r
-        LEFT JOIN beneficiaire b ON r.id_beneficiaire = b.id_beneficiaire
-        WHERE r.id_beneficiaire = $1
-        ORDER BY r.date_rdv DESC
+        FROM rendez_vous
+        LEFT JOIN beneficiaire b ON rendez_vous.id_beneficiaire = b.id_beneficiaire
+        WHERE rendez_vous.id_beneficiaire = $1
+        ORDER BY rendez_vous.date_rdv DESC
     `;
     
     db.all(query, [patientId], (err, rows) => {
@@ -192,13 +116,13 @@ router.get('/medecin/:id', (req, res) => {
     }
     
     const query = `
-        SELECT r.*, 
+        SELECT rendez_vous.*, 
                b.nom as patient_nom, 
                b.prenom as patient_prenom
-        FROM rendez_vous r
-        LEFT JOIN beneficiaire b ON r.id_beneficiaire = b.id_beneficiaire
-        WHERE r.id_medecin = $1
-        ORDER BY r.date_rdv ASC
+        FROM rendez_vous
+        LEFT JOIN beneficiaire b ON rendez_vous.id_beneficiaire = b.id_beneficiaire
+        WHERE rendez_vous.id_medecin = $1
+        ORDER BY rendez_vous.date_rdv ASC
         LIMIT 10
     `;
     
@@ -212,6 +136,76 @@ router.get('/medecin/:id', (req, res) => {
 });
 
 // ============================================
+// POST Ajouter un rendez-vous
+// ============================================
+router.post('/', (req, res) => {
+    const { id_beneficiaire, id_medecin, date_rdv, motif } = req.body;
+    
+    if (!id_beneficiaire || !id_medecin || !date_rdv) {
+        return res.status(400).json({ 
+            error: "Tous les champs sont requis",
+            details: {
+                id_beneficiaire: !!id_beneficiaire,
+                id_medecin: !!id_medecin,
+                date_rdv: !!date_rdv
+            }
+        });
+    }
+    
+    // Vérifier que le patient existe
+    db.get('SELECT id_beneficiaire FROM beneficiaire WHERE id_beneficiaire = $1', 
+        [id_beneficiaire], 
+        (err, patient) => {
+            if (err) {
+                console.error('Erreur vérification patient:', err);
+                return res.status(500).json({ error: err.message });
+            }
+            if (!patient) {
+                return res.status(404).json({ error: "Patient non trouvé" });
+            }
+            
+            // ✅ Vérifier que le médecin existe (dans personnel)
+            db.get('SELECT id_personnel FROM personnel WHERE id_personnel = $1 AND poste = $2', 
+                [id_medecin, 'medecin'], 
+                (err, medecin) => {
+                    if (err) {
+                        console.error('Erreur vérification médecin:', err);
+                        return res.status(500).json({ error: err.message });
+                    }
+                    if (!medecin) {
+                        return res.status(404).json({ error: "Médecin non trouvé" });
+                    }
+                    
+                    const query = `
+                        INSERT INTO rendez_vous 
+                        (id_beneficiaire, id_medecin, date_rdv, motif, statut)
+                        VALUES ($1, $2, $3, $4, 'planifie')
+                        RETURNING id_rendez_vous
+                    `;
+                    
+                    db.get(query, [id_beneficiaire, id_medecin, date_rdv, motif || ''], (err, result) => {
+                        if (err) {
+                            console.error('Erreur insertion rendez-vous:', err);
+                            if (err.message.includes('UNIQUE constraint')) {
+                                return res.status(409).json({ 
+                                    error: "Ce créneau est déjà pris pour ce médecin" 
+                                });
+                            }
+                            return res.status(500).json({ error: err.message });
+                        }
+                        
+                        res.status(201).json({ 
+                            id: result.id_rendez_vous, 
+                            message: "Rendez-vous ajouté avec succès" 
+                        });
+                    });
+                }
+            );
+        }
+    );
+});
+
+// ============================================
 // PUT Modifier un rendez-vous
 // ============================================
 router.put('/:id', (req, res) => {
@@ -222,7 +216,6 @@ router.put('/:id', (req, res) => {
         return res.status(400).json({ error: "ID invalide" });
     }
     
-    // Construction dynamique de la requête
     let updates = [];
     let values = [];
     let paramIndex = 1;
