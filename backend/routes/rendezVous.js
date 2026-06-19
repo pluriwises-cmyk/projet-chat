@@ -6,12 +6,19 @@ const db = require('../database/db');
 // GET Tous les rendez-vous
 // ============================================
 router.get('/', (req, res) => {
+    // ✅ Approche sans alias : colonnes explicites
     const query = `
-        SELECT rendez_vous.*, 
-               b.nom as patient_nom, 
-               b.prenom as patient_prenom
+        SELECT 
+            rendez_vous.id_rdv, 
+            rendez_vous.id_beneficiaire, 
+            rendez_vous.id_medecin, 
+            rendez_vous.date_rdv, 
+            rendez_vous.motif, 
+            rendez_vous.statut,
+            beneficiaire.nom as patient_nom, 
+            beneficiaire.prenom as patient_prenom
         FROM rendez_vous
-        LEFT JOIN beneficiaire b ON rendez_vous.id_beneficiaire = b.id_beneficiaire
+        LEFT JOIN beneficiaire ON rendez_vous.id_beneficiaire = beneficiaire.id_beneficiaire
         ORDER BY rendez_vous.date_rdv DESC
     `;
     
@@ -29,11 +36,17 @@ router.get('/', (req, res) => {
 // ============================================
 router.get('/aujourdhui', (req, res) => {
     const query = `
-        SELECT rendez_vous.*, 
-               b.nom as patient_nom, 
-               b.prenom as patient_prenom
+        SELECT 
+            rendez_vous.id_rdv, 
+            rendez_vous.id_beneficiaire, 
+            rendez_vous.id_medecin, 
+            rendez_vous.date_rdv, 
+            rendez_vous.motif, 
+            rendez_vous.statut,
+            beneficiaire.nom as patient_nom, 
+            beneficiaire.prenom as patient_prenom
         FROM rendez_vous
-        LEFT JOIN beneficiaire b ON rendez_vous.id_beneficiaire = b.id_beneficiaire
+        LEFT JOIN beneficiaire ON rendez_vous.id_beneficiaire = beneficiaire.id_beneficiaire
         WHERE DATE(rendez_vous.date_rdv) = CURRENT_DATE
         ORDER BY rendez_vous.date_rdv ASC
     `;
@@ -58,11 +71,17 @@ router.get('/date/:date', (req, res) => {
     }
     
     const query = `
-        SELECT rendez_vous.*, 
-               b.nom as patient_nom, 
-               b.prenom as patient_prenom
+        SELECT 
+            rendez_vous.id_rdv, 
+            rendez_vous.id_beneficiaire, 
+            rendez_vous.id_medecin, 
+            rendez_vous.date_rdv, 
+            rendez_vous.motif, 
+            rendez_vous.statut,
+            beneficiaire.nom as patient_nom, 
+            beneficiaire.prenom as patient_prenom
         FROM rendez_vous
-        LEFT JOIN beneficiaire b ON rendez_vous.id_beneficiaire = b.id_beneficiaire
+        LEFT JOIN beneficiaire ON rendez_vous.id_beneficiaire = beneficiaire.id_beneficiaire
         WHERE DATE(rendez_vous.date_rdv) = $1
         ORDER BY rendez_vous.date_rdv ASC
     `;
@@ -87,11 +106,17 @@ router.get('/patient/:id', (req, res) => {
     }
     
     const query = `
-        SELECT rendez_vous.*, 
-               b.nom as patient_nom, 
-               b.prenom as patient_prenom
+        SELECT 
+            rendez_vous.id_rdv, 
+            rendez_vous.id_beneficiaire, 
+            rendez_vous.id_medecin, 
+            rendez_vous.date_rdv, 
+            rendez_vous.motif, 
+            rendez_vous.statut,
+            beneficiaire.nom as patient_nom, 
+            beneficiaire.prenom as patient_prenom
         FROM rendez_vous
-        LEFT JOIN beneficiaire b ON rendez_vous.id_beneficiaire = b.id_beneficiaire
+        LEFT JOIN beneficiaire ON rendez_vous.id_beneficiaire = beneficiaire.id_beneficiaire
         WHERE rendez_vous.id_beneficiaire = $1
         ORDER BY rendez_vous.date_rdv DESC
     `;
@@ -116,11 +141,17 @@ router.get('/medecin/:id', (req, res) => {
     }
     
     const query = `
-        SELECT rendez_vous.*, 
-               b.nom as patient_nom, 
-               b.prenom as patient_prenom
+        SELECT 
+            rendez_vous.id_rdv, 
+            rendez_vous.id_beneficiaire, 
+            rendez_vous.id_medecin, 
+            rendez_vous.date_rdv, 
+            rendez_vous.motif, 
+            rendez_vous.statut,
+            beneficiaire.nom as patient_nom, 
+            beneficiaire.prenom as patient_prenom
         FROM rendez_vous
-        LEFT JOIN beneficiaire b ON rendez_vous.id_beneficiaire = b.id_beneficiaire
+        LEFT JOIN beneficiaire ON rendez_vous.id_beneficiaire = beneficiaire.id_beneficiaire
         WHERE rendez_vous.id_medecin = $1
         ORDER BY rendez_vous.date_rdv ASC
         LIMIT 10
@@ -164,7 +195,7 @@ router.post('/', (req, res) => {
                 return res.status(404).json({ error: "Patient non trouvé" });
             }
             
-            // ✅ Vérifier que le médecin existe (dans personnel)
+            // Vérifier que le médecin existe (dans personnel)
             db.get('SELECT id_personnel FROM personnel WHERE id_personnel = $1 AND poste = $2', 
                 [id_medecin, 'medecin'], 
                 (err, medecin) => {
@@ -180,7 +211,7 @@ router.post('/', (req, res) => {
                         INSERT INTO rendez_vous 
                         (id_beneficiaire, id_medecin, date_rdv, motif, statut)
                         VALUES ($1, $2, $3, $4, 'planifie')
-                        RETURNING id_rendez_vous
+                        RETURNING id_rdv
                     `;
                     
                     db.get(query, [id_beneficiaire, id_medecin, date_rdv, motif || ''], (err, result) => {
@@ -195,7 +226,7 @@ router.post('/', (req, res) => {
                         }
                         
                         res.status(201).json({ 
-                            id: result.id_rendez_vous, 
+                            id: result.id_rdv, 
                             message: "Rendez-vous ajouté avec succès" 
                         });
                     });
@@ -241,8 +272,8 @@ router.put('/:id', (req, res) => {
     const query = `
         UPDATE rendez_vous 
         SET ${updates.join(', ')}
-        WHERE id_rendez_vous = $${paramIndex}
-        RETURNING id_rendez_vous
+        WHERE id_rdv = $${paramIndex}
+        RETURNING id_rdv
     `;
     
     db.get(query, values, (err, result) => {
@@ -269,8 +300,8 @@ router.delete('/:id', (req, res) => {
     
     const query = `
         DELETE FROM rendez_vous 
-        WHERE id_rendez_vous = $1
-        RETURNING id_rendez_vous
+        WHERE id_rdv = $1
+        RETURNING id_rdv
     `;
     
     db.get(query, [id], (err, result) => {
