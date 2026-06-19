@@ -81,18 +81,20 @@
                 return;
             }
 
+            let medecinId = null;
+
             try {
                 const payload = JSON.parse(atob(token.split('.')[1]));
                 const role = payload.role;
 
-                // Vérification que l'utilisateur a bien le rôle 'medecin'
                 if (role !== 'medecin') {
                     alert('Accès non autorisé. Vous n\'avez pas les droits médecin.');
                     window.location.href = 'index.html';
                     return;
                 }
 
-                // Si tout est OK, on affiche le nom du médecin (optionnel)
+                medecinId = payload.id; // ✅ Récupération de l'ID du médecin
+
                 if (payload.nom && payload.prenom) {
                     document.getElementById('doctorName').textContent = `Dr. ${payload.prenom} ${payload.nom}`;
                 }
@@ -104,9 +106,14 @@
 
             // ========== CHARGEMENT DES DONNÉES ==========
             try {
-                const stats = await API.getStats();
-                const consultations = await API.getConsultations();
-                const rdvs = await API.getRendezVous();
+                // ✅ Récupération des stats du médecin
+                const stats = await API.getStatsMedecin(medecinId);
+
+                // ✅ Récupération des consultations avec l'ID du médecin
+                const consultations = await API.getConsultations(medecinId);
+
+                // ✅ Récupération des rendez-vous avec l'ID du médecin
+                const rdvs = await API.getRendezVous(medecinId);
 
                 // Affichage des stats
                 const statsRow = document.getElementById('statsRow');
@@ -125,29 +132,29 @@
                     </div>
                 `;
 
-                // Affichage des consultations
+                // ✅ Affichage des consultations (corrigé)
                 const consContainer = document.getElementById('consultationsContainer');
-                if (consultations.length) {
+                if (consultations && consultations.length) {
                     consContainer.innerHTML = consultations.map(c => `
                         <div class="consultation-card">
                             <div><strong>${new Date(c.date_heure).toLocaleString()}</strong></div>
-                            <div>Patient : ${c.patientNom || '?'} ${c.patientPrenom || '?'}</div>
+                            <div>Patient : ${c.beneficiaire?.nom || '?'} ${c.beneficiaire?.prenom || '?'}</div>
                             <div class="text-muted">Motif : ${c.motif || 'Non précisé'}</div>
-                            <span class="badge-custom badge-${c.statut === 'realisee' ? 'success' : 'warning'}">${c.statut}</span>
+                            <span class="badge-custom badge-${c.statut === 'realisee' ? 'success' : 'warning'}">${c.statut || 'planifiée'}</span>
                         </div>
                     `).join('');
                 } else {
                     consContainer.innerHTML = '<p class="text-center text-muted">Aucune consultation récente</p>';
                 }
 
-                // Affichage des rendez-vous
+                // ✅ Affichage des rendez-vous (corrigé)
                 const rdvContainer = document.getElementById('rdvContainer');
-                if (rdvs.length) {
+                if (rdvs && rdvs.length) {
                     rdvContainer.innerHTML = rdvs.map(r => `
                         <div class="consultation-card">
-                            <div><strong>${new Date(r.date_rdv).toLocaleString()}</strong> - ${r.nom} ${r.prenom}</div>
+                            <div><strong>${new Date(r.date_rdv).toLocaleString()}</strong> - ${r.beneficiaire?.nom || '?'} ${r.beneficiaire?.prenom || '?'}</div>
                             <div class="text-muted">Motif : ${r.motif || 'Consultation'}</div>
-                            <span class="badge-custom badge-${r.statut === 'confirmé' ? 'success' : 'warning'}">${r.statut}</span>
+                            <span class="badge-custom badge-${r.statut === 'confirmé' ? 'success' : 'warning'}">${r.statut || 'planifié'}</span>
                         </div>
                     `).join('');
                 } else {
