@@ -1,32 +1,55 @@
 const express = require('express');
 const router = express.Router();
 const jwt = require('jsonwebtoken');
-const { createClient } = require('@supabase/supabase-js'); // 👈 IMPORTANT
+const { createClient } = require('@supabase/supabase-js');
 
 // ============================================
-// CONFIGURATION SUPABASE
+// CONFIGURATION SUPABASE (avec vérification)
 // ============================================
-const supabaseUrl = process.env.SUPABASE_URL || 'https://ton-projet.supabase.co';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || 'ta_clé_anon';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
+
+// ✅ Vérification stricte des variables
+if (!supabaseUrl || !supabaseKey) {
+    console.error('❌ ERREUR FATALE : Variables Supabase manquantes !');
+    console.error('   SUPABASE_URL:', supabaseUrl ? '✅' : '❌');
+    console.error('   SUPABASE_ANON_KEY:', supabaseKey ? '✅' : '❌');
+    // Ne pas planter en production, mais logger l'erreur
+}
+
 const supabase = createClient(supabaseUrl, supabaseKey);
-
-// Si tu utilises un fichier de config centralisé :
-// const supabase = require('../config/supabase');
-
 console.log('✅ Route auth.js chargée avec succès (Supabase)');
 
 const SECRET_KEY = process.env.JWT_SECRET || 'votre_secret_tres_long_et_securise_ici';
+console.log('🔐 JWT_SECRET:', process.env.JWT_SECRET ? '✅ Configuré' : '⚠️ Fallback utilisé');
 
 // ============================================
-// ROUTE LOGIN (version Supabase)
+// ROUTE LOGIN (avec logs détaillés)
 // ============================================
 router.post('/login', async (req, res) => {
     const { username, password, role } = req.body;
 
+    // ✅ Logs de débogage
+    console.log('📝 Tentative de login:', { 
+        username, 
+        role, 
+        passwordLength: password?.length || 0 
+    });
+
+    // Validation des champs
     if (!username || !password || !role) {
-        return res.status(400).json({ error: 'Identifiant, mot de passe et rôle requis' });
+        console.log('❌ Champs manquants:', { username: !!username, password: !!password, role: !!role });
+        return res.status(400).json({ 
+            error: 'Identifiant, mot de passe et rôle requis',
+            details: {
+                username: !!username,
+                password: !!password,
+                role: !!role
+            }
+        });
     }
 
+    // Liste des rôles autorisés
     const allowedRoles = [
         'medecin', 'infirmier', 'administratif', 
         'hotellerie', 'logistique', 'qualite', 'voyages',
@@ -34,34 +57,63 @@ router.post('/login', async (req, res) => {
     ];
 
     if (!allowedRoles.includes(role)) {
-        return res.status(400).json({ error: 'Rôle non reconnu' });
+        console.log('❌ Rôle non reconnu:', role);
+        return res.status(400).json({ 
+            error: 'Rôle non reconnu',
+            allowedRoles: allowedRoles
+        });
     }
 
     try {
-        // Nettoyer l'identifiant (email ou téléphone)
+        // Nettoyer l'identifiant
         const cleanUsername = username.trim();
+        console.log('🔍 Recherche de l\'utilisateur:', cleanUsername);
 
         // Chercher dans la table personnel
         const { data: user, error } = await supabase
             .from('personnel')
             .select('*')
             .or(`email.eq.${cleanUsername},telephone.eq.${cleanUsername}`)
-            .single();
+            .maybeSingle(); // ✅ Utilisation de maybeSingle() au lieu de single()
 
-        if (error || !user) {
+        if (error) {
+            console.error('❌ Erreur Supabase:', error);
+            return res.status(500).json({ error: 'Erreur serveur' });
+        }
+
+        if (!user) {
+            console.log('❌ Utilisateur non trouvé:', cleanUsername);
             return res.status(401).json({ error: 'Identifiant ou mot de passe incorrect' });
         }
 
+        console.log('✅ Utilisateur trouvé:', { 
+            id: user.id_personnel, 
+            nom: user.nom, 
+            prenom: user.prenom,
+            poste: user.poste,
+            email: user.email
+        });
+
+        // Vérification du rôle
         if (user.poste !== role) {
-            return res.status(403).json({ error: 'Rôle non autorisé' });
+            console.log('❌ Rôle incorrect:', { attendu: role, trouvé: user.poste });
+            return res.status(403).json({ 
+                error: 'Rôle non autorisé',
+                details: `Votre rôle est "${user.poste}", mais vous tentez de vous connecter en tant que "${role}"`
+            });
         }
 
-        // Vérification du mot de passe (si hashé, utiliser bcrypt)
-        // Pour l'instant, on compare en clair (à améliorer plus tard)
+        // Vérification du mot de passe
+        // ✅ Si le mot de passe est hashé (bcrypt), il faudra utiliser bcrypt.compare()
+        // Pour l'instant, comparaison en clair
         if (user.mot_de_passe !== password) {
-            return res.status(401).json({ error: 'Mot de passe incorrect' });
+            console.log('❌ Mot de passe incorrect pour:', user.email);
+            return res.status(401).json({ error: 'Identifiant ou mot de passe incorrect' });
         }
 
+        console.log('✅ Mot de passe correct pour:', user.email);
+
+        // Génération du token JWT
         const token = jwt.sign(
             { 
                 id: user.id_personnel, 
@@ -74,6 +126,8 @@ router.post('/login', async (req, res) => {
             { expiresIn: '24h' }
         );
 
+        console.log('✅ Token généré pour:', user.email);
+
         res.json({ 
             token, 
             user: { 
@@ -85,13 +139,16 @@ router.post('/login', async (req, res) => {
         });
 
     } catch (error) {
-        console.error('Erreur login:', error);
-        return res.status(500).json({ error: 'Erreur serveur' });
+        console.error('❌ Erreur login:', error);
+        return res.status(500).json({ 
+            error: 'Erreur serveur', 
+            details: error.message 
+        });
     }
 });
 
 // ============================================
-// ROUTE CHECK-PHONE (VERSION SUPABASE AMÉLIORÉE)
+// ROUTE CHECK-PHONE
 // ============================================
 router.post('/check-phone', async (req, res) => {
     const { telephone } = req.body;
@@ -101,17 +158,19 @@ router.post('/check-phone', async (req, res) => {
     }
 
     try {
-        // Nettoyer le numéro (enlever espaces, tirets, parenthèses, points)
+        // Nettoyer le numéro
         const cleanPhone = telephone.replace(/[\s\-\.\(\)]/g, '');
+        console.log('🔍 Recherche téléphone:', cleanPhone);
 
         // 1. Chercher dans PERSONNEL
         const { data: personnel, error: errP } = await supabase
             .from('personnel')
             .select('id_personnel, nom, prenom, poste')
             .eq('telephone', cleanPhone)
-            .maybeSingle(); // 👈 .maybeSingle() = pas d'erreur si aucun résultat
+            .maybeSingle();
 
         if (personnel) {
+            console.log('✅ Personnel trouvé:', personnel.nom);
             return res.json({ 
                 found: true, 
                 type: 'personnel', 
@@ -130,6 +189,7 @@ router.post('/check-phone', async (req, res) => {
             .maybeSingle();
 
         if (benef) {
+            console.log('✅ Bénéficiaire trouvé:', benef.nom);
             return res.json({ 
                 found: true, 
                 type: 'patient', 
@@ -140,11 +200,11 @@ router.post('/check-phone', async (req, res) => {
             });
         }
 
-        // 3. Aucun utilisateur trouvé
+        console.log('❌ Aucun utilisateur trouvé pour:', cleanPhone);
         return res.json({ found: false });
 
     } catch (error) {
-        console.error('Erreur check-phone:', error);
+        console.error('❌ Erreur check-phone:', error);
         return res.status(500).json({ error: 'Erreur serveur' });
     }
 });
