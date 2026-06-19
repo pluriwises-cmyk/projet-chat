@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../database/db');
+const { createClient } = require('@supabase/supabase-js');
+
+const supabase = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY
+);
 
 // ============================================
 // GET Toutes les chambres
@@ -167,47 +173,59 @@ router.get('/stats/globales', (req, res) => {
 });
 
 // ============================================
-// POST Ajouter une chambre
+// POST Ajouter une chambre (Version Supabase - Corrigée)
 // ============================================
-router.post('/', (req, res) => {
+router.post('/', async (req, res) => {
     const { numero, type, capacite, statut } = req.body;
-    
+
     if (!numero) {
         return res.status(400).json({ error: "Numéro de chambre requis" });
     }
 
-    // Vérifier si le numéro existe déjà
-    db.get('SELECT id_chambre FROM chambre WHERE numero = $1', [numero], (err, existing) => {
-        if (err) {
-            console.error('Erreur vérification chambre:', err);
-            return res.status(500).json({ error: err.message });
-        }
-        if (existing) {
-            return res.status(409).json({ error: "Une chambre avec ce numéro existe déjà" });
+    try {
+        // Vérification avec Supabase
+        const { data: existing, error: checkError } = await supabase
+            .from('chambre')
+            .select('id_chambre')
+            .eq('numero', numero)
+            .maybeSingle();
+
+        if (checkError) {
+            console.error('❌ Erreur vérification chambre:', checkError);
+            return res.status(500).json({ error: checkError.message });
         }
 
-        const query = `
-            INSERT INTO chambre (numero, type, capacite, statut)
-            VALUES ($1, $2, $3, $4)
-            RETURNING id_chambre
-        `;
-        
-        db.get(query, [
-            numero, 
-            type || 'standard', 
-            capacite || 1, 
-            statut || 'libre'
-        ], (err, result) => {
-            if (err) {
-                console.error('Erreur POST chambre:', err);
-                return res.status(500).json({ error: err.message });
-            }
-            res.status(201).json({ 
-                id: result.id_chambre, 
-                message: "Chambre ajoutée avec succès" 
+        if (existing) {
+            return res.status(409).json({
+                error: "Une chambre avec ce numéro existe déjà"
             });
+        }
+
+        // Insertion
+        const { data, error } = await supabase
+            .from('chambre')
+            .insert([{
+                numero,
+                type: type || 'standard',
+                capacite: capacite || 1,
+                statut: statut || 'libre'
+            }])
+            .select();
+
+        if (error) {
+            console.error('❌ Erreur insertion chambre:', error);
+            return res.status(500).json({ error: error.message });
+        }
+
+        res.status(201).json({
+            id: data[0].id_chambre,
+            message: "Chambre ajoutée avec succès"
         });
-    });
+
+    } catch (err) {
+        console.error('❌ Erreur POST chambre:', err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // ============================================
@@ -333,9 +351,7 @@ router.delete('/:id', (req, res) => {
         [id, 'active'], 
         (err, admission) => {
             if (err) {
-                // Si la table admission n'existe pas, on continue
                 console.warn('⚠️ Table admission non trouvée ou erreur:', err.message);
-                // Continuer vers la suppression
             } else if (admission) {
                 return res.status(409).json({ 
                     error: "Impossible de supprimer une chambre occupée" 
