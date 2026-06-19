@@ -1,10 +1,7 @@
-// frontend/js/api.js
 const API = {
     baseURL: 'https://clinique-hoteliere-et-actions.onrender.com/api',
 
-    getToken() {
-        return localStorage.getItem('token');
-    },
+    getToken() { return localStorage.getItem('token'); },
 
     getHeaders() {
         const token = this.getToken();
@@ -27,6 +24,56 @@ const API = {
         }
     },
 
+    // ✅ CORRECTION : Utilisation de l'URL REST correcte
+    async getConsultations(medecinId) {
+        if (!medecinId) return [];
+        return this.get(`/consultations/medecin/${medecinId}`);
+    },
+
+    // ✅ CORRECTION : Utilisation de l'URL REST correcte
+    async getRendezVous(medecinId) {
+        if (!medecinId) return [];
+        return this.get(`/rendez-vous/medecin/${medecinId}`);
+    },
+
+    // ✅ CORRECTION : Utilisation de l'URL REST correcte
+    async getStatsMedecin(medecinId) {
+        if (!medecinId) return {};
+        return this.get(`/statistiques/medecin/${medecinId}`);
+    },
+
+    // ============================================
+    // AUTRES MÉTHODES (inchangées)
+    // ============================================
+
+    async getStats() {
+        return this.get('/statistiques/dashboard');
+    },
+
+    async getPatients() {
+        return this.get('/beneficiaires');
+    },
+
+    async getConstantes() {
+        return this.get('/constante');
+    },
+
+    async getChambres() {
+        return this.get('/chambres');
+    },
+
+    async getStocks() {
+        return this.get('/stocks');
+    },
+
+    async getQualite() {
+        return this.get('/qualite/indicateurs');
+    },
+
+    async getFactures() {
+        return this.get('/factures');
+    },
+
     async post(endpoint, data) {
         try {
             const response = await fetch(`${this.baseURL}${endpoint}`, {
@@ -42,54 +89,12 @@ const API = {
         }
     },
 
-    // Récupérer les consultations d'un médecin
-    async getConsultations(medecinId) {
-        return this.get(`/consultations?medecin_id=${medecinId}`);
-    },
-
-    // Récupérer les patients
-    async getPatients() {
-        return this.get('/beneficiaires');
-    },
-
-    // Récupérer les rendez-vous
-    async getRendezVous() {
-        return this.get('/rendez-vous');
-    },
-
-    // Récupérer les statistiques
-    async getStats() {
-        return this.get('/statistiques/dashboard');
-    },
-
-    // Récupérer les constantes d'un patient
-    async getConstantes() {
-        return this.get('/constantes');
-    },
-
-    // Récupérer les stocks
-    async getStocks() {
-        return this.get('/stocks');
-    },
-
-    // Récupérer les indicateurs qualité
-    async getQualite() {
-        return this.get('/qualite/indicateurs');
-    },
-
-    // Récupérer les factures
-    async getFactures() {
-        return this.get('/factures');
-    },
-
-    // Déconnexion
     logout() {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         window.location.href = 'index.html';
     },
 
-    // Récupérer l'utilisateur connecté
     getUser() {
         const user = localStorage.getItem('user');
         return user ? JSON.parse(user) : null;
