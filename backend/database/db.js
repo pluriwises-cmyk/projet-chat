@@ -1,19 +1,34 @@
 // backend/database/db.js
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = process.env.SUPABASE_URL || 'https://mtcumvngnalsozoufltk.supabase.co';
-const supabaseKey = process.env.SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im10Y3Vtdm5nbmFsc296b3VmbHRrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE3ODM4NDcsImV4cCI6MjA5NzM1OTg0N30.lBiqoKoAuDgdiYoqeQT1W6Qc_4oycLfrpRzzeFR_Ht8';
+// ==========================================
+// 1. VÉRIFICATION STRICTE DES VARIABLES
+// ==========================================
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+    console.error('❌ ERREUR FATALE : Variables Supabase manquantes dans l\'environnement.');
+    console.error('   SUPABASE_URL:', process.env.SUPABASE_URL ? '✅' : '❌');
+    console.error('   SUPABASE_ANON_KEY:', process.env.SUPABASE_ANON_KEY ? '✅' : '❌');
+    process.exit(1);
+}
 
-const supabase = createClient(supabaseUrl, supabaseKey);
-console.log('✅ Connecté à Supabase');
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+console.log('✅ Connecté à Supabase avec succès');
 
 const db = {};
 
 // ==========================================
-// 1. FONCTIONS PRINCIPALES
+// 2. FONCTION DE GESTION DES ERREURS
+// ==========================================
+const handleSupabaseError = (err, callback, customMessage) => {
+    console.error('❌ Erreur Supabase:', err);
+    if (callback) callback(err, null);
+};
+
+// ==========================================
+// 3. FONCTIONS CRUD ABSTRAITES
 // ==========================================
 
-// === db.get : Récupère une seule ligne (corrigé) ===
+// === db.get : Récupère une seule ligne ===
 db.get = (sql, params, callback) => {
     if (typeof params === 'function') {
         callback = params;
@@ -21,30 +36,37 @@ db.get = (sql, params, callback) => {
     }
     try {
         const tableName = extractTableName(sql);
+        if (!tableName) {
+            console.error('❌ Table non trouvée dans la requête:', sql);
+            return callback(new Error('Table non trouvée'), null);
+        }
+
         let query = supabase.from(tableName).select('*');
 
-        // On ne cherche l'email que si la table est 'personnel' ou 'beneficiaire'
+        // ✅ Gestion du OR pour auth (email OR telephone)
         const isAuthTable = ['personnel', 'beneficiaire'].includes(tableName);
-        
-        if (sql.toUpperCase().includes('OR') && isAuthTable) {
+        if (sql.toUpperCase().includes('OR') && isAuthTable && params.length > 0) {
             query = query.or(`email.eq.${params[0]},telephone.eq.${params[0]}`);
         } else {
             const conditions = extractWhereConditions(sql);
-            conditions.forEach((cond, i) => { 
-                query = query.eq(cond.column, params[i] || cond.value);
+            conditions.forEach((cond, i) => {
+                if (params[i] !== undefined) {
+                    query = query.eq(cond.column, params[i]);
+                }
             });
         }
 
-        query.limit(1).then(({ data, error }) => {
+        // ✅ Utilisation de maybeSingle() au lieu de single()
+        // = plus robuste : retourne null si aucun résultat
+        query.maybeSingle().then(({ data, error }) => {
             if (error) {
-                console.error('Erreur Supabase (get):', error);
-                callback(error, null);
+                handleSupabaseError(error, callback);
             } else {
-                callback(null, data && data.length > 0 ? data[0] : null);
+                callback(null, data || null);
             }
         });
     } catch (err) {
-        console.error('Erreur db.get:', err);
+        console.error('❌ Erreur db.get:', err);
         callback(err, null);
     }
 };
@@ -57,21 +79,41 @@ db.all = (sql, params, callback) => {
     }
     try {
         const tableName = extractTableName(sql);
-        supabase.from(tableName).select('*').then(({ data, error }) => {
+        if (!tableName) {
+            console.error('❌ Table non trouvée dans la requête:', sql);
+            return callback(new Error('Table non trouvée'), null);
+        }
+
+        let query = supabase.from(tableName).select('*');
+
+        // ✅ Support ORDER BY
+        const orderMatch = sql.match(/ORDER BY\s+([a-zA-Z0-9_]+)\s*(DESC|ASC)?/i);
+        if (orderMatch) {
+            const column = orderMatch[1];
+            const ascending = orderMatch[2] ? orderMatch[2].toUpperCase() !== 'DESC' : true;
+            query = query.order(column, { ascending });
+        }
+
+        // ✅ Support LIMIT
+        const limitMatch = sql.match(/LIMIT\s+(\d+)/i);
+        if (limitMatch) {
+            query = query.limit(parseInt(limitMatch[1]));
+        }
+
+        query.then(({ data, error }) => {
             if (error) {
-                console.error('Erreur Supabase (all):', error);
-                callback(error, null);
+                handleSupabaseError(error, callback);
             } else {
-                callback(null, data);
+                callback(null, data || []);
             }
         });
     } catch (err) {
-        console.error('Erreur db.all:', err);
+        console.error('❌ Erreur db.all:', err);
         callback(err, null);
     }
 };
 
-// === db.run : INSERT, UPDATE, DELETE (corrigé) ===
+// === db.run : INSERT, UPDATE, DELETE ===
 db.run = (sql, params, callback) => {
     if (typeof params === 'function') {
         callback = params;
@@ -79,64 +121,95 @@ db.run = (sql, params, callback) => {
     }
     try {
         const tableName = extractTableName(sql);
+        if (!tableName) {
+            console.error('❌ Table non trouvée dans la requête:', sql);
+            return callback(new Error('Table non trouvée'), null);
+        }
+
         const sqlLower = sql.trim().toLowerCase();
 
+        // --- INSERT ---
         if (sqlLower.startsWith('insert')) {
             const keys = extractInsertKeys(sql);
-            const insertPayload = {};
+            const payload = {};
             keys.forEach((key, i) => {
-                insertPayload[key] = params[i] !== undefined ? params[i] : null;
+                payload[key] = params[i] !== undefined ? params[i] : null;
             });
 
-            supabase.from(tableName).insert(insertPayload).then(({ data, error }) => {
+            supabase.from(tableName).insert(payload).select().then(({ data, error }) => {
                 if (error) {
-                    console.error('Erreur Supabase (run/insert):', error);
-                    callback(error, null);
+                    handleSupabaseError(error, callback);
                 } else {
-                    callback(null, { lastID: data?.[0]?.id || 0 });
+                    // ✅ Détection automatique du nom de l'ID
+                    const firstItem = data?.[0] || {};
+                    const idKey = Object.keys(firstItem).find(k => k.includes('id')) || 'id';
+                    const lastID = firstItem[idKey] || 0;
+                    callback(null, { lastID });
                 }
             });
+
+        // --- UPDATE ---
         } else if (sqlLower.startsWith('update')) {
             const updateData = extractUpdateData(sql);
             const conditions = extractWhereConditions(sql);
+            
+            if (conditions.length === 0) {
+                return callback(new Error('UPDATE sans condition WHERE non supporté'), null);
+            }
+
             let query = supabase.from(tableName).update(updateData);
-            const paramIndex = Object.keys(updateData).length;
-            conditions.forEach((c, i) => {
-                query = query.eq(c.column, params[paramIndex + i]);
-            });
-            query.then(({ error }) => {
-                if (error) {
-                    console.error('Erreur Supabase (run/update):', error);
-                    callback(error, null);
-                } else {
-                    callback(null, { changes: 1 });
+            
+            // Appliquer les conditions
+            const paramStart = Object.keys(updateData).length;
+            conditions.forEach((cond, i) => {
+                const paramIndex = paramStart + i;
+                if (params[paramIndex] !== undefined) {
+                    query = query.eq(cond.column, params[paramIndex]);
                 }
             });
+
+            query.then(({ error, count }) => {
+                if (error) {
+                    handleSupabaseError(error, callback);
+                } else {
+                    callback(null, { changes: count || 0 });
+                }
+            });
+
+        // --- DELETE ---
         } else if (sqlLower.startsWith('delete')) {
             const conditions = extractWhereConditions(sql);
+            
+            if (conditions.length === 0) {
+                return callback(new Error('DELETE sans condition WHERE non supporté'), null);
+            }
+
             let query = supabase.from(tableName).delete();
-            conditions.forEach((c, i) => {
-                query = query.eq(c.column, params[i]);
-            });
-            query.then(({ error }) => {
-                if (error) {
-                    console.error('Erreur Supabase (run/delete):', error);
-                    callback(error, null);
-                } else {
-                    callback(null, { changes: 1 });
+            conditions.forEach((cond, i) => {
+                if (params[i] !== undefined) {
+                    query = query.eq(cond.column, params[i]);
                 }
             });
+
+            query.then(({ error, count }) => {
+                if (error) {
+                    handleSupabaseError(error, callback);
+                } else {
+                    callback(null, { changes: count || 0 });
+                }
+            });
+
         } else {
-            callback(new Error('Requête non supportée'), null);
+            callback(new Error('Action SQL non supportée: ' + sqlLower), null);
         }
     } catch (err) {
-        console.error('Erreur db.run:', err);
+        console.error('❌ Erreur db.run:', err);
         callback(err, null);
     }
 };
 
 // ==========================================
-// 2. FONCTIONS WHATSAPP
+// 4. FONCTIONS MÉTIER (WhatsApp & Logs)
 // ==========================================
 
 // === Sauvegarde d'un code WhatsApp ===
@@ -145,22 +218,25 @@ db.saveWhatsAppCode = (telephone, callback) => {
     const expiration = new Date();
     expiration.setMinutes(expiration.getMinutes() + 2);
 
-    console.log("DEBUG: Insertion code WhatsApp pour:", telephone);
+    console.log("📱 Insertion code WhatsApp pour:", telephone);
 
     supabase.from('whatsapp_validation').insert({
         telephone: telephone,
         code: code,
+        statut: 'en_attente',
         date_expiration: expiration.toISOString(),
         date_envoi: new Date().toISOString(),
-        statut: 'en_attente',
         tentative: 0
-    }).then(({ data, error }) => {
+    }).select().then(({ data, error }) => {
         if (error) {
-            console.error('❌ ERREUR SUPABASE:', error);
+            console.error('❌ Erreur saveWhatsAppCode:', error);
             callback(error);
         } else {
             console.log("✅ Code WhatsApp inséré !");
-            callback(null, { id: data?.[0]?.id, code });
+            callback(null, { 
+                id: data?.[0]?.id_validation || data?.[0]?.id || 0,
+                code 
+            });
         }
     });
 };
@@ -177,12 +253,16 @@ db.verifyWhatsAppCode = (telephone, code, callback) => {
         .limit(1)
         .then(({ data, error }) => {
             if (error) {
-                console.error('Erreur verifyWhatsAppCode:', error);
+                console.error('❌ Erreur verifyWhatsAppCode:', error);
                 callback(error);
             } else if (data && data.length > 0) {
                 const row = data[0];
+                // Mettre à jour le statut
                 supabase.from('whatsapp_validation')
-                    .update({ statut: 'valide', date_validation: new Date().toISOString() })
+                    .update({ 
+                        statut: 'valide', 
+                        date_validation: new Date().toISOString() 
+                    })
                     .eq('id_validation', row.id_validation)
                     .then(() => {
                         callback(null, row);
@@ -199,48 +279,66 @@ db.logAction = (userId, userType, action, ip, callback) => {
         id_utilisateur: userId,
         type_utilisateur: userType,
         action: action,
-        ip: ip
+        ip: ip,
+        date_action: new Date().toISOString()
     }).then(({ error }) => {
         if (error) {
-            console.error('Erreur logAction:', error);
-            callback(error);
+            console.error('❌ Erreur logAction:', error);
+            if (callback) callback(error);
         } else {
-            callback(null);
+            if (callback) callback(null);
         }
     });
 };
 
 // ==========================================
-// 3. FONCTIONS UTILITAIRES
+// 5. UTILITAIRES DE PARSING (AMÉLIORÉS)
 // ==========================================
 
 function extractTableName(sql) {
-    const match = sql.match(/(?:FROM|INTO|UPDATE|DELETE\s+FROM)\s+([a-zA-Z0-9_]+)/i);
-    return match ? match[1] : 'personnel';
+    const match = sql.match(/(?:FROM|INTO|UPDATE|DELETE\s+FROM|INSERT\s+INTO)\s+([a-zA-Z0-9_]+)/i);
+    return match ? match[1] : '';
 }
 
 function extractWhereConditions(sql) {
     const match = sql.match(/WHERE\s+(.+?)(?:\s+ORDER BY|\s+GROUP BY|\s+LIMIT|$)/i);
     if (!match) return [];
-    return match[1].split(/AND/i).map(c => {
-        const [column, value] = c.split('=').map(s => s.trim().replace(/['"]/g, ''));
-        return { column, value };
-    }).filter(c => c.column);
+    
+    // Gérer les conditions multiples (AND)
+    const parts = match[1].split(/\s+AND\s+/i);
+    return parts.map(part => {
+        // Gérer les comparaisons : =, >=, <=, LIKE, etc.
+        const compareMatch = part.match(/([a-zA-Z0-9_]+)\s*(=|>=|<=|>|<|LIKE)\s*(.+)/i);
+        if (compareMatch) {
+            const column = compareMatch[1].trim();
+            const operator = compareMatch[2].trim();
+            const value = compareMatch[3].trim().replace(/['"]/g, '');
+            return { column, operator, value };
+        }
+        return null;
+    }).filter(c => c !== null);
 }
 
 function extractInsertKeys(sql) {
-    const match = sql.match(/\((.*?)\)/);
+    // Trouver la première parenthèse après INSERT INTO table
+    const match = sql.match(/INSERT\s+INTO\s+[a-zA-Z0-9_]+\s*\(([^)]+)\)/i);
     if (!match) return [];
-    return match[1].split(',').map(c => c.trim());
+    return match[1].split(',').map(s => s.trim());
 }
 
 function extractUpdateData(sql) {
     const match = sql.match(/SET\s+(.+?)(?:\s+WHERE|$)/i);
     if (!match) return {};
+    
     const data = {};
-    match[1].split(',').forEach(p => {
-        const [k, v] = p.split('=').map(s => s.trim().replace(/['"]/g, ''));
-        data[k] = v;
+    const parts = match[1].split(',');
+    parts.forEach(part => {
+        const kvMatch = part.match(/([a-zA-Z0-9_]+)\s*=\s*(.+)/i);
+        if (kvMatch) {
+            const key = kvMatch[1].trim();
+            const value = kvMatch[2].trim().replace(/['"]/g, '');
+            data[key] = value;
+        }
     });
     return data;
 }
