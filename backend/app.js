@@ -19,51 +19,80 @@ app.use(express.static(path.join(__dirname, '../frontend')));
 // ===== INITIALISATION =====
 const initDatabase = () => {
     console.log('🔄 Initialisation de la base...');
-    // Ajout colonne si absente
     db.run(`ALTER TABLE personnel ADD COLUMN mot_de_passe TEXT`, (err) => {
-        console.log('✅ Vérification/Ajout colonne mot_de_passe terminée.');
+        if (err && !err.message.includes('duplicate column')) {
+            console.error('❌ Erreur ALTER TABLE:', err.message);
+        } else {
+            console.log('✅ Vérification/Ajout colonne mot_de_passe terminée.');
+        }
     });
 };
 
 setTimeout(initDatabase, 2000);
 
-// ===== ROUTES API =====
+// ============================================
+// ROUTES API
+// ============================================
+
+// Routes principales
+app.use('/api/auth', authRoutes);
 app.use('/api/beneficiaires', require('./routes/beneficiaires'));
 app.use('/api/consultations', require('./routes/consultations'));
+app.use('/api/statistiques', require('./routes/statistiques'));
+
+// Routes médecin
 app.use('/api/prescriptions', require('./routes/prescriptions'));
-app.use('/api/constantes', require('./routes/constantes'));
+app.use('/api/rendez-vous', require('./routes/rendezVous'));
+
+// Routes infirmier
+app.use('/api/constantes', require('./routes/constantes'));   // ✅ Pluriel
+app.use('/api/constante', require('./routes/constantes'));    // ✅ Alias singulier pour le front
 app.use('/api/soins', require('./routes/soins'));
 app.use('/api/medicaments', require('./routes/medicaments'));
 app.use('/api/planning', require('./routes/planning'));
-app.use('/api/admissions', require('./routes/admissions'));
-app.use('/api/factures', require('./routes/factures'));
-app.use('/api/dossiers-medicaux', require('./routes/dossiersMedicaux'));
-app.use('/api/rendez-vous', require('./routes/rendezVous'));
-app.use('/api/produits', require('./routes/produits'));
-app.use('/api/indicateurs-qualite', require('./routes/indicateursQualite'));
+
+// Routes hôtellerie
 app.use('/api/chambres', require('./routes/chambres'));
 app.use('/api/commandes', require('./routes/commandes'));
+
+// Routes logistique
+app.use('/api/stocks', require('./routes/stocks'));
+app.use('/api/produits', require('./routes/produits'));
+
+// Routes voyages
 app.use('/api/vehicules', require('./routes/vehicules'));
 app.use('/api/courses', require('./routes/courses'));
+
+// Routes qualité
+app.use('/api/indicateurs-qualite', require('./routes/indicateursQualite'));
+
+// Routes direction
+app.use('/api/factures', require('./routes/factures'));
+app.use('/api/admissions', require('./routes/admissions'));
+app.use('/api/dossiers-medicaux', require('./routes/dossiersMedicaux'));
 app.use('/api/rapports', require('./routes/rapports'));
-app.use('/api/parametres', require('./routes/parametres'));
+
+// Routes paramètres
 app.use('/api/personnel', require('./routes/personnel'));
+app.use('/api/parametres', require('./routes/parametres'));
 app.use('/api/projets', require('./routes/projets'));
-app.use('/api/statistiques', require('./routes/statistiques'));
-app.use('/api/stocks', require('./routes/stocks'));
+
+// Routes WhatsApp
 app.use('/api/whatsapp', require('./routes/whatsapp'));
+
+// Routes spécialistes
 app.use('/api/specialistes', require('./routes/specialistes'));
 app.use('/api/messages', require('./routes/messages'));
 app.use('/api/documents', require('./routes/documents'));
-app.use('/api/stats', require('./routes/stats'));
-app.use('/api/auth', authRoutes);
 
-// ===== STATISTIQUES MÉDECIN (CORRIGÉES) =====
+// Routes stats (alias)
+app.use('/api/stats', require('./routes/stats'));
+
+// ===== STATISTIQUES MÉDECIN (Route directe) =====
 app.get('/api/stats/medecin/:id', (req, res) => {
     const id = req.params.id;
-    const today = new Date().toISOString().split('T')[0]; // Date YYYY-MM-DD
+    const today = new Date().toISOString().split('T')[0];
 
-    // Utilisation de LIKE pour filtrer par date sans dépendre de fonctions SQL natives
     db.get(`SELECT COUNT(*) as count FROM consultation WHERE id_medecin = ? AND date_heure LIKE ?`, [id, `${today}%`], (err, cons) => {
         if (err) return res.status(500).json({ error: err.message });
         
@@ -88,6 +117,16 @@ app.get('/api/stats/medecin/:id', (req, res) => {
     });
 });
 
+// ============================================
+// ROUTE 404 - Non trouvée
+// ============================================
+app.use((req, res) => {
+    res.status(404).json({ error: 'Route non trouvée' });
+});
+
+// ============================================
+// DÉMARRAGE DU SERVEUR
+// ============================================
 app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Serveur actif sur http://localhost:${PORT}`);
 });
