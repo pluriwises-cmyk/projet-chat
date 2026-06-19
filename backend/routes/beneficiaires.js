@@ -11,13 +11,56 @@ const supabase = createClient(
 const JWT_SECRET = process.env.JWT_SECRET || 'hopital_saint_jean_secret_key';
 
 // ============================================
+// GET Tous les bénéficiaires (AJOUTÉ)
+// ============================================
+router.get('/', async (req, res) => {
+    try {
+        const { data, error } = await supabase
+            .from('beneficiaire')
+            .select('*')
+            .order('nom', { ascending: true });
+
+        if (error) throw error;
+        res.json(data || []);
+    } catch (err) {
+        console.error('❌ Erreur récupération bénéficiaires:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================
+// GET Un bénéficiaire par ID (AJOUTÉ)
+// ============================================
+router.get('/:id', async (req, res) => {
+    const id = req.params.id;
+    if (!id || isNaN(id)) {
+        return res.status(400).json({ error: "ID invalide" });
+    }
+
+    try {
+        const { data, error } = await supabase
+            .from('beneficiaire')
+            .select('*')
+            .eq('id_beneficiaire', id)
+            .maybeSingle();
+
+        if (error) throw error;
+        if (!data) {
+            return res.status(404).json({ error: "Bénéficiaire non trouvé" });
+        }
+        res.json(data);
+    } catch (err) {
+        console.error('❌ Erreur récupération bénéficiaire:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ============================================
 // FONCTION UTILITAIRE : Inscription d'un patient
 // ============================================
 async function inscrirePatient(nom, prenom, telephone, email, adresse) {
-    // Nettoyer le téléphone
     const cleanPhone = telephone.replace(/[\s\-\.\(\)]/g, '');
 
-    // 1. Vérifier les doublons
     const { data: existing, error: checkError } = await supabase
         .from('beneficiaire')
         .select('id_beneficiaire, nom, prenom')
@@ -32,7 +75,6 @@ async function inscrirePatient(nom, prenom, telephone, email, adresse) {
         throw err;
     }
 
-    // 2. Vérifier l'email (si fourni)
     if (email) {
         const { data: existingEmail, error: emailError } = await supabase
             .from('beneficiaire')
@@ -48,7 +90,6 @@ async function inscrirePatient(nom, prenom, telephone, email, adresse) {
         }
     }
 
-    // 3. Insertion
     const { data, error } = await supabase
         .from('beneficiaire')
         .insert([{ 
@@ -63,17 +104,15 @@ async function inscrirePatient(nom, prenom, telephone, email, adresse) {
         .select();
 
     if (error) throw new Error(`Erreur insertion: ${error.message}`);
-
     return data[0];
 }
 
 // ============================================
-// POST /inscription (Route principale)
+// POST /inscription
 // ============================================
 router.post('/inscription', async (req, res) => {
     const { nom, prenom, telephone, email, adresse } = req.body;
 
-    // Validation
     const errors = [];
     if (!nom) errors.push("Nom requis");
     if (!prenom) errors.push("Prénom requis");
@@ -87,10 +126,8 @@ router.post('/inscription', async (req, res) => {
     }
 
     try {
-        // Appel à la fonction utilitaire
         const newBenef = await inscrirePatient(nom, prenom, telephone, email, adresse);
 
-        // Création du token JWT
         const token = jwt.sign(
             { 
                 id: newBenef.id_beneficiaire, 
@@ -118,7 +155,6 @@ router.post('/inscription', async (req, res) => {
     } catch (err) {
         console.error('Erreur inscription:', err);
         
-        // Gestion des erreurs spécifiques
         if (err.code === 'DUPLICATE_PHONE') {
             return res.status(409).json({
                 error: err.message,
@@ -140,14 +176,11 @@ router.post('/inscription', async (req, res) => {
 });
 
 // ============================================
-// POST / (Alias de /inscription) - APPROCHE SIMPLIFIÉE
+// POST / (Alias)
 // ============================================
 router.post('/', async (req, res) => {
-    // ✅ MÉTHODE 1 : Réutilisation de la fonction utilitaire
-    // (La plus propre - je recommande celle-ci)
     const { nom, prenom, telephone, email, adresse } = req.body;
 
-    // Validation
     if (!nom || !prenom || !telephone) {
         return res.status(400).json({ error: 'Nom, prénom et téléphone requis' });
     }
@@ -186,28 +219,5 @@ router.post('/', async (req, res) => {
         res.status(500).json({ error: 'Erreur serveur', details: err.message });
     }
 });
-
-// ============================================
-// ALTERNATIVE : Route POST / avec redirection (si tu préfères)
-// ============================================
-/*
-router.post('/', (req, res) => {
-    // ✅ MÉTHODE 2 : Redirection explicite
-    // Plus claire que router.handle()
-    const { nom, prenom, telephone, email, adresse } = req.body;
-    
-    // Reconstruire la requête pour /inscription
-    req.body = { nom, prenom, telephone, email, adresse };
-    req.url = '/inscription';
-    
-    // Appeler la route manuellement
-    router._router.handle(req, res);
-});
-*/
-
-// ============================================
-// GET, PUT, DELETE (inchangés)
-// ============================================
-// ... le reste du code ...
 
 module.exports = router;
