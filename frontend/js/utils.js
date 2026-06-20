@@ -176,6 +176,27 @@ function formaterPersonnel(p) {
         statut: p.statut || 'Actif'
     };
 }
+// --- PRESCRIPTIONS ---
+function formaterPrescription(p) {
+    return {
+        id: p.id_prescription,
+        medicament: p.medicament || 'Médicament',
+        posologie: p.posologie || 'N/A',
+        duree: p.duree || 'N/A',
+        instructions: p.instructions || '',
+        statut: p.statut || 'en_cours',
+        statutBadge: p.statut === 'en_cours' ? 'warning' : p.statut === 'terminee' ? 'success' : 'secondary',
+        date: p.date_prescription ? new Date(p.date_prescription).toLocaleDateString() : 'Date inconnue',
+        patient: {
+            nom: p.beneficiaire?.nom || p.patient_nom || 'Inconnu',
+            prenom: p.beneficiaire?.prenom || p.patient_prenom || ''
+        },
+        medecin: {
+            nom: p.medecin_nom || 'Médecin',
+            prenom: p.medecin_prenom || ''
+        }
+    };
+}
 
 // ============================================
 // EXPOSITION GLOBALE (pour les pages HTML)
