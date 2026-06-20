@@ -9,19 +9,26 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <script src="/js/api.js"></script>
+    <script src="/js/utils.js"></script>
 </head>
 
 <body>
     <nav class="navbar-custom" style="background: #3498db;">
         <div class="container-fluid px-4">
             <span class="navbar-brand"><i class="fas fa-plane"></i> Agence voyages</span>
-            <button class="btn btn-light btn-sm" onclick="window.location.href='index.html'">Accueil</button>
+            <div>
+                <span class="text-white me-3" id="voyagesName">Voyages</span>
+                <button class="btn btn-light btn-sm" onclick="window.location.href='index.html'">Accueil</button>
+            </div>
         </div>
     </nav>
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2>Transferts du jour et etat du parck</h2>
+
+    <div class="container-fluid px-4 mt-3">
         <button class="btn btn-primary" onclick="window.location.href='ajout-course.html'">
             <i class="fas fa-plus"></i> Nouvelle course
+        </button>
+        <button class="btn btn-success ms-2" onclick="window.location.href='ajout-vehicule.html'">
+            <i class="fas fa-plus"></i> Nouveau véhicule
         </button>
     </div>
 
@@ -40,47 +47,221 @@
     </div>
 
     <script>
-        (async function () {
-            try {
-                // Récupération des courses
-                const courses = await API.get('/courses');
-                const transfertsContainer = document.getElementById('transfertsList');
-                if (courses.length) {
-                    transfertsContainer.innerHTML = courses.map(t => {
-                        const date = new Date(t.date_depart);
-                        const heure = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-                        return `
-                            <div class="consultation-card mb-2" style="border-left-color: #3498db;">
-                                <strong>${heure}</strong> – ${t.patient_nom} ${t.patient_prenom}<br>
-                                ${t.lieu_depart} → ${t.destination}<br>
-                                Chauffeur : ${t.chauffeur_prenom} ${t.chauffeur_nom}<br>
-                                Véhicule : ${t.immatriculation}<br>
-                                <span class="badge-custom badge-${t.statut === 'terminee' ? 'success' : t.statut === 'en_cours' ? 'info' : 'warning'}">${t.statut}</span>
-                            </div>
-                        `;
-                    }).join('');
-                } else {
-                    transfertsContainer.innerHTML = '<p class="text-muted">Aucun transfert aujourd\'hui.</p>';
+        // ===== RÉCUPÉRER LE NOM DE L'UTILISATEUR DEPUIS LE TOKEN =====
+        (function afficherNom() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const prenom = payload.prenom || '';
+                    const nom = payload.nom || '';
+                    document.getElementById('voyagesName').textContent = prenom + ' ' + nom || 'Voyages';
+                } catch (e) {
+                    console.error('Erreur parsing token', e);
                 }
-
-                // Récupération des véhicules
-                const vehicules = await API.get('/vehicules');
-                const vehiculesContainer = document.getElementById('vehiculesList');
-                if (vehicules.length) {
-                    vehiculesContainer.innerHTML = vehicules.map(v => `
-                        <div class="consultation-card mb-2" style="border-left-color: #3498db;">
-                            <strong>${v.type}</strong> (${v.immatriculation})<br>
-                            <span class="badge-custom badge-${v.etat === 'disponible' ? 'success' : v.etat === 'en_course' ? 'info' : 'danger'}">${v.etat}</span>
-                        </div>
-                    `).join('');
-                } else {
-                    vehiculesContainer.innerHTML = '<p class="text-muted">Aucun véhicule trouvé.</p>';
-                }
-
-            } catch (e) {
-                document.getElementById('transfertsList').innerHTML = '<p class="text-danger">Erreur chargement.</p>';
             }
         })();
+
+        // ===== CHARGEMENT DES DONNÉES =====
+        (async function () {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                // ========== COURSES / TRANSFERTS ==========
+                const courses = await API.get('/courses');
+                console.log("📦 Courses reçues :", courses);
+
+                // Fonction de formatage spécifique pour les courses (car formaterCourse peut être différent)
+                function formaterCourseVoyage(c) {
+                    return {
+                        id: c.id_course || c.id,
+                        patient: {
+                            nom: c.patient_nom || 'Inconnu',
+                            prenom: c.patient_prenom || ''
+                        },
+                        lieu_depart: c.lieu_depart || 'N/A',
+                        destination: c.destination || 'N/A',
+                        chauffeur: {
+                            nom: c.chauffeur_nom || 'Non attribué',
+                            prenom: c.chauffeur_prenom || ''
+                        },
+                        vehicule: c.immatriculation || 'N/A',
+                        heure: c.date_depart ? new Date(c.date_depart).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+                        date: c.date_depart ? new Date(c.date_depart).toLocaleDateString() : 'Date inconnue',
+                        statut: c.statut || 'Planifiée',
+                        statutBadge: c.statut === 'terminee' ? 'success' : c.statut === 'en_cours' ? 'info' : 'warning'
+                    };
+                }
+
+                afficherListe(
+                    'transfertsList',
+                    courses,
+                    formaterCourseVoyage,
+                    (f) => `
+                        <div class="consultation-card mb-3" style="border-left-color: #3498db;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>${f.heure}</strong> – ${f.patient.prenom} ${f.patient.nom}
+                                    <span class="badge-custom badge-${f.statutBadge} ms-2">${f.statut}</span>
+                                </div>
+                                <small class="text-muted">${f.date}</small>
+                            </div>
+                            <div class="mt-2">
+                                <div><i class="fas fa-map-marker-alt me-2"></i>${f.lieu_depart} → ${f.destination}</div>
+                                <div><i class="fas fa-user me-2"></i>Chauffeur: ${f.chauffeur.prenom} ${f.chauffeur.nom}</div>
+                                <div><i class="fas fa-car me-2"></i>Véhicule: ${f.vehicule}</div>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="window.location.href='course-details.html?id=${f.id}'">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                ${f.statut !== 'terminee' ? `
+                                    <button class="btn btn-sm btn-outline-success me-1" onclick="terminerCourse(${f.id})">
+                                        <i class="fas fa-check"></i> Terminer
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-info me-1" onclick="demarrerCourse(${f.id})">
+                                        <i class="fas fa-play"></i> Démarrer
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-sm btn-outline-danger" onclick="supprimerCourse(${f.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `
+                );
+
+                // ========== VÉHICULES ==========
+                const vehicules = await API.get('/vehicules');
+                console.log("📦 Véhicules reçus :", vehicules);
+
+                function formaterVehicule(v) {
+                    return {
+                        id: v.id_vehicule || v.id,
+                        type: v.type || 'N/A',
+                        immatriculation: v.immatriculation || 'N/A',
+                        etat: v.etat || 'disponible',
+                        etatBadge: v.etat === 'disponible' ? 'success' : v.etat === 'en_course' ? 'info' : 'danger'
+                    };
+                }
+
+                afficherListe(
+                    'vehiculesList',
+                    vehicules,
+                    formaterVehicule,
+                    (f) => `
+                        <div class="consultation-card mb-3" style="border-left-color: #3498db;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>${f.type}</strong>
+                                    <span class="badge bg-secondary ms-2">${f.immatriculation}</span>
+                                </div>
+                                <span class="badge bg-${f.etatBadge}">${f.etat}</span>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="window.location.href='vehicule-details.html?id=${f.id}'">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning me-1" onclick="window.location.href='editer-vehicule.html?id=${f.id}'">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="supprimerVehicule(${f.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `
+                );
+
+            } catch (e) {
+                console.error('❌ Erreur chargement voyages :', e);
+                document.getElementById('transfertsList').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Erreur lors du chargement des données.
+                        <br><small class="text-muted">${e.message || ''}</small>
+                    </div>
+                `;
+            }
+        })();
+
+        // ============================================
+        // FONCTIONS ACTIONS - COURSES
+        // ============================================
+        async function demarrerCourse(id) {
+            if (!confirm('Démarrer cette course ?')) return;
+
+            try {
+                const result = await API.patch(`/courses/${id}/statut`, { statut: 'en_cours' });
+                if (result.success) {
+                    alert('Course démarrée');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la mise à jour');
+                }
+            } catch (e) {
+                console.error('❌ Erreur :', e);
+                alert('Erreur lors de la mise à jour');
+            }
+        }
+
+        async function terminerCourse(id) {
+            if (!confirm('Terminer cette course ?')) return;
+
+            try {
+                const result = await API.patch(`/courses/${id}/statut`, { statut: 'terminee' });
+                if (result.success) {
+                    alert('Course terminée');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la mise à jour');
+                }
+            } catch (e) {
+                console.error('❌ Erreur :', e);
+                alert('Erreur lors de la mise à jour');
+            }
+        }
+
+        async function supprimerCourse(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette course ?')) return;
+
+            try {
+                const result = await API.delete(`/courses/${id}`);
+                if (result.success) {
+                    alert('Course supprimée');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la suppression');
+                }
+            } catch (e) {
+                console.error('❌ Erreur suppression :', e);
+                alert('Erreur lors de la suppression');
+            }
+        }
+
+        // ============================================
+        // FONCTIONS ACTIONS - VÉHICULES
+        // ============================================
+        async function supprimerVehicule(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce véhicule ?')) return;
+
+            try {
+                const result = await API.delete(`/vehicules/${id}`);
+                if (result.success) {
+                    alert('Véhicule supprimé');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la suppression');
+                }
+            } catch (e) {
+                console.error('❌ Erreur suppression :', e);
+                alert('Erreur lors de la suppression');
+            }
+        }
     </script>
 </body>
 
