@@ -34,20 +34,26 @@
             
             if (specialistes && specialistes.length) {
                 container.innerHTML = specialistes.map(s => {
-                    // ✅ Utiliser les images locales selon la spécialité
+                    // ✅ Récupération des infos du personnel (si jointure faite)
+                    const nom = s.nom || 'Inconnu';
+                    const prenom = s.prenom || '';
+                    const telephone = s.telephone || 'Non renseigné';
+                    const email = s.email || 'Non renseigné';
+
+                    // ✅ Gestion des images
                     let imageUrl = 'images/default-doctor.png';
-                    const specialite = (s.specialite || '').toLowerCase();
+                    const photo = s.photo_url || '';
                     
-                    if (specialite.includes('cardiologue')) {
+                    if (photo.includes('cardiologue') || photo === 'cardiologue.jpg') {
                         imageUrl = 'images/cardiologue.jpg';
-                    } else if (specialite.includes('chirurgie') || specialite.includes('chirurgien')) {
+                    } else if (photo.includes('chirurgien') || photo === 'chirurgien.jpg') {
                         imageUrl = 'images/chirurgien.jpg';
-                    } else if (specialite.includes('pediatre') || specialite.includes('pédiatre')) {
+                    } else if (photo.includes('pediatre') || photo === 'pediatre.jpg') {
                         imageUrl = 'images/pediatre.jpg';
-                    } else if (specialite.includes('urologue')) {
+                    } else if (photo.includes('urologue') || photo === 'urologue.jpg') {
                         imageUrl = 'images/urologue.jpg';
-                    } else {
-                        imageUrl = 'https://via.placeholder.com/300x200?text=Dr';
+                    } else if (photo) {
+                        imageUrl = `images/${photo}`;
                     }
 
                     return `
@@ -55,14 +61,14 @@
                             <div class="card h-100 shadow-sm">
                                 <img src="${imageUrl}" 
                                      class="card-img-top" 
-                                     alt="Photo de ${s.nom} ${s.prenom}" 
+                                     alt="Photo de ${prenom} ${nom}" 
                                      style="height: 250px; object-fit: cover;"
-                                     onerror="this.src='https://via.placeholder.com/300x200?text=Photo'">
+                                     onerror="this.src='https://via.placeholder.com/300x200?text=Dr'">
                                 <div class="card-body">
-                                    <h5 class="card-title">Dr. ${s.nom || ''} ${s.prenom || ''}</h5>
+                                    <h5 class="card-title">Dr. ${prenom} ${nom}</h5>
                                     <p class="card-text"><strong>Spécialité :</strong> ${s.specialite || 'Non renseigné'}</p>
-                                    <p class="card-text"><strong>Tél :</strong> ${s.telephone || 'Non renseigné'}</p>
-                                    <p class="card-text"><strong>Email :</strong> ${s.email || 'Non renseigné'}</p>
+                                    <p class="card-text"><strong>Tél :</strong> ${telephone}</p>
+                                    <p class="card-text"><strong>Email :</strong> ${email}</p>
                                     <p class="card-text">${s.description || ''}</p>
                                 </div>
                                 <div class="card-footer bg-white border-0">
@@ -86,7 +92,6 @@
     
     function contacterSpecialiste(id) {
         alert(`Formulaire de contact pour le spécialiste #${id}`);
-        // window.location.href = `contact-specialiste.html?id=${id}`;
     }
     
     chargerSpecialistes();
