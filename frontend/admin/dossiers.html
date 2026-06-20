@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="../css/style.css">
     <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
 </head>
 
 <body>
@@ -30,21 +31,98 @@
 
     <script>
         (async function () {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '../index.html';
+                return;
+            }
+
             try {
                 const dossiers = await API.get('/dossiers-medicaux');
-                const container = document.getElementById('dossiersList');
-                container.innerHTML = dossiers.map(d => `
-                    <div class="consultation-card mb-2" style="border-left-color: #8e44ad;">
-                        <strong>${d.nom} ${d.prenom}</strong><br>
-                        Groupe : ${d.groupe_sanguin || '?'}<br>
-                        Allergies : ${d.allergies || 'aucune'}<br>
-                        Médecin traitant : ${d.medecin_traitant || '?'}
-                    </div>
-                `).join('');
+                console.log("📦 Dossiers reçus :", dossiers);
+
+                // ✅ Fonction de formatage spécifique pour les dossiers
+                function formaterDossier(d) {
+                    return {
+                        id: d.id_dossier || d.id || d.id_beneficiaire,
+                        patient: {
+                            nom: d.nom || d.patient_nom || 'Inconnu',
+                            prenom: d.prenom || d.patient_prenom || ''
+                        },
+                        groupe_sanguin: d.groupe_sanguin || 'Non renseigné',
+                        allergies: d.allergies || 'Aucune',
+                        medecin_traitant: d.medecin_traitant || 'Non attribué',
+                        date_creation: d.date_creation ? new Date(d.date_creation).toLocaleDateString() : 'Date inconnue',
+                        statut: d.statut || 'Actif',
+                        statutBadge: d.statut === 'actif' ? 'success' : 'secondary'
+                    };
+                }
+
+                // ✅ Affichage avec afficherListe
+                afficherListe(
+                    'dossiersList',
+                    dossiers,
+                    formaterDossier,
+                    (f) => `
+                        <div class="consultation-card mb-3" style="border-left-color: #8e44ad;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>${f.patient.prenom} ${f.patient.nom}</strong>
+                                    <span class="badge-custom badge-${f.statutBadge} ms-2">${f.statut}</span>
+                                </div>
+                                <small class="text-muted">${f.date_creation}</small>
+                            </div>
+                            <div class="mt-2">
+                                <div><i class="fas fa-tint me-2"></i>Groupe sanguin: ${f.groupe_sanguin}</div>
+                                <div><i class="fas fa-exclamation-triangle me-2"></i>Allergies: ${f.allergies}</div>
+                                <div><i class="fas fa-user-md me-2"></i>Médecin traitant: ${f.medecin_traitant}</div>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="window.location.href='dossier-details.html?id=${f.id}'">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning me-1" onclick="window.location.href='editer-dossier.html?id=${f.id}'">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="supprimerDossier(${f.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `
+                );
+
             } catch (e) {
-                container.innerHTML = '<p class="text-danger">Erreur chargement.</p>';
+                console.error('❌ Erreur chargement dossiers :', e);
+                document.getElementById('dossiersList').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Erreur lors du chargement des dossiers. Veuillez réessayer.
+                        <br><small class="text-muted">${e.message || ''}</small>
+                    </div>
+                `;
             }
         })();
+
+        // ============================================
+        // FONCTION SUPPRIMER
+        // ============================================
+        async function supprimerDossier(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer ce dossier ? Cette action est irréversible.')) return;
+
+            try {
+                const result = await API.delete(`/dossiers-medicaux/${id}`);
+                if (result.success) {
+                    alert('Dossier supprimé avec succès');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la suppression');
+                }
+            } catch (e) {
+                console.error('❌ Erreur suppression :', e);
+                alert('Erreur lors de la suppression');
+            }
+        }
     </script>
 </body>
 
