@@ -9,15 +9,20 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <script src="/js/api.js"></script>
+    <script src="/js/utils.js"></script>
 </head>
 
 <body>
     <nav class="navbar-custom" style="background: #e67e22;">
         <div class="container-fluid px-4">
             <span class="navbar-brand"><i class="fas fa-hotel"></i> Service hôtellerie</span>
-            <button class="btn btn-light btn-sm" onclick="window.location.href='index.html'">Accueil</button>
+            <div>
+                <span class="text-white me-3" id="hotellerieName">Hôtellerie</span>
+                <button class="btn btn-light btn-sm" onclick="window.location.href='index.html'">Accueil</button>
+            </div>
         </div>
     </nav>
+
     <div class="container-fluid px-4 mt-3">
         <button class="btn btn-primary" onclick="window.location.href='ajout-chambre.html'">
             <i class="fas fa-plus"></i> Nouvelle chambre
@@ -42,42 +47,214 @@
     </div>
 
     <script>
-        (async function () {
-            try {
-                // Chambres
-                const chambres = await API.get('/chambres');
-                const chambresContainer = document.getElementById('chambresList');
-                if (chambres.length) {
-                    chambresContainer.innerHTML = chambres.map(c => `
-                        <div class="consultation-card mb-2" style="border-left-color: #e67e22;">
-                            <strong>Chambre ${c.numero}</strong> (${c.type})<br>
-                            Capacité : ${c.capacite} personne(s)<br>
-                            Statut : <span class="badge-custom badge-${c.statut === 'libre' ? 'success' : c.statut === 'occupee' ? 'info' : 'warning'}">${c.statut}</span>
-                        </div>
-                    `).join('');
-                } else {
-                    chambresContainer.innerHTML = '<p class="text-muted">Aucune chambre trouvée.</p>';
+        // ===== RÉCUPÉRER LE NOM DE L'UTILISATEUR DEPUIS LE TOKEN =====
+        (function afficherNom() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const prenom = payload.prenom || '';
+                    const nom = payload.nom || '';
+                    document.getElementById('hotellerieName').textContent = prenom + ' ' + nom || 'Hôtellerie';
+                } catch (e) {
+                    console.error('Erreur parsing token', e);
                 }
-
-                // Commandes repas
-                const commandes = await API.get('/commandes');
-                const commandesContainer = document.getElementById('commandesList');
-                if (commandes.length) {
-                    commandesContainer.innerHTML = commandes.map(cmd => `
-                        <div class="consultation-card mb-2" style="border-left-color: #e67e22;">
-                            <strong>Patient : ${cmd.nom} ${cmd.prenom}</strong><br>
-                            Service : ${cmd.type_service}<br>
-                            Statut : <span class="badge-custom badge-${cmd.statut === 'livre' ? 'success' : cmd.statut === 'pret' ? 'info' : 'warning'}">${cmd.statut}</span>
-                        </div>
-                    `).join('');
-                } else {
-                    commandesContainer.innerHTML = '<p class="text-muted">Aucune commande trouvée.</p>';
-                }
-
-            } catch (e) {
-                document.getElementById('chambresList').innerHTML = '<p class="text-danger">Erreur chargement.</p>';
             }
         })();
+
+        // ===== CHARGEMENT DES DONNÉES =====
+        (async function () {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            try {
+                // ========== CHAMBRES ==========
+                const chambres = await API.getChambres();
+                console.log("📦 Chambres reçues :", chambres);
+
+                afficherListe(
+                    'chambresList',
+                    chambres,
+                    formaterChambre,
+                    (f) => `
+                        <div class="consultation-card mb-3" style="border-left-color: #e67e22;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>Chambre ${f.numero}</strong>
+                                    <span class="badge bg-secondary ms-2">${f.type}</span>
+                                </div>
+                                <span class="badge bg-${f.statutBadge}">${f.statut}</span>
+                            </div>
+                            <div class="mt-2">
+                                <div><i class="fas fa-users me-2"></i>Capacité: ${f.capacite} personne(s)</div>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="window.location.href='chambre-details.html?id=${f.id}'">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning me-1" onclick="window.location.href='editer-chambre.html?id=${f.id}'">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                ${f.statut === 'libre' ? `
+                                    <button class="btn btn-sm btn-outline-success me-1" onclick="occuperChambre(${f.id})">
+                                        <i class="fas fa-check"></i> Occuper
+                                    </button>
+                                ` : f.statut === 'occupee' ? `
+                                    <button class="btn btn-sm btn-outline-info me-1" onclick="libererChambre(${f.id})">
+                                        <i class="fas fa-door-open"></i> Libérer
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-sm btn-outline-danger" onclick="supprimerChambre(${f.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `
+                );
+
+                // ========== COMMANDES ==========
+                const commandes = await API.get('/commandes');
+                console.log("📦 Commandes reçues :", commandes);
+
+                afficherListe(
+                    'commandesList',
+                    commandes,
+                    formaterCommande,
+                    (f) => `
+                        <div class="consultation-card mb-3" style="border-left-color: #e67e22;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>${f.patientPrenom} ${f.patient}</strong>
+                                    <span class="badge bg-secondary ms-2">${f.repas}</span>
+                                </div>
+                                <span class="badge bg-${f.statutBadge}">${f.statut}</span>
+                            </div>
+                            <div class="mt-2">
+                                <div><i class="fas fa-utensils me-2"></i>Quantité: ${f.quantite}</div>
+                                <div><i class="fas fa-clock me-2"></i>Date: ${f.date}</div>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="window.location.href='commande-details.html?id=${f.id}'">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                ${f.statut !== 'livre' ? `
+                                    <button class="btn btn-sm btn-outline-success me-1" onclick="livrerCommande(${f.id})">
+                                        <i class="fas fa-check"></i> Livrer
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-sm btn-outline-danger" onclick="supprimerCommande(${f.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `
+                );
+
+            } catch (e) {
+                console.error('❌ Erreur chargement hôtellerie :', e);
+                document.getElementById('chambresList').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Erreur lors du chargement des données.
+                        <br><small class="text-muted">${e.message || ''}</small>
+                    </div>
+                `;
+            }
+        })();
+
+        // ============================================
+        // FONCTIONS ACTIONS - CHAMBRES
+        // ============================================
+        async function occuperChambre(id) {
+            if (!confirm('Confirmer l\'occupation de cette chambre ?')) return;
+
+            try {
+                const result = await API.patch(`/chambres/${id}/statut`, { statut: 'occupee' });
+                if (result.success) {
+                    alert('Chambre occupée');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la mise à jour');
+                }
+            } catch (e) {
+                console.error('❌ Erreur :', e);
+                alert('Erreur lors de la mise à jour');
+            }
+        }
+
+        async function libererChambre(id) {
+            if (!confirm('Confirmer la libération de cette chambre ?')) return;
+
+            try {
+                const result = await API.patch(`/chambres/${id}/statut`, { statut: 'libre' });
+                if (result.success) {
+                    alert('Chambre libérée');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la mise à jour');
+                }
+            } catch (e) {
+                console.error('❌ Erreur :', e);
+                alert('Erreur lors de la mise à jour');
+            }
+        }
+
+        async function supprimerChambre(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette chambre ?')) return;
+
+            try {
+                const result = await API.delete(`/chambres/${id}`);
+                if (result.success) {
+                    alert('Chambre supprimée');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la suppression');
+                }
+            } catch (e) {
+                console.error('❌ Erreur suppression :', e);
+                alert('Erreur lors de la suppression');
+            }
+        }
+
+        // ============================================
+        // FONCTIONS ACTIONS - COMMANDES
+        // ============================================
+        async function livrerCommande(id) {
+            if (!confirm('Confirmer la livraison de cette commande ?')) return;
+
+            try {
+                const result = await API.patch(`/commandes/${id}/statut`, { statut: 'livre' });
+                if (result.success) {
+                    alert('Commande livrée');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la mise à jour');
+                }
+            } catch (e) {
+                console.error('❌ Erreur :', e);
+                alert('Erreur lors de la mise à jour');
+            }
+        }
+
+        async function supprimerCommande(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette commande ?')) return;
+
+            try {
+                const result = await API.delete(`/commandes/${id}`);
+                if (result.success) {
+                    alert('Commande supprimée');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la suppression');
+                }
+            } catch (e) {
+                console.error('❌ Erreur suppression :', e);
+                alert('Erreur lors de la suppression');
+            }
+        }
     </script>
 </body>
 
