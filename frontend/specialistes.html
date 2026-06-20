@@ -31,29 +31,64 @@
             const response = await fetch('/api/specialistes');
             const specialistes = await response.json();
             const container = document.getElementById('specialistesList');
-            if (specialistes.length) {
-                container.innerHTML = specialistes.map(s => `
-                    <div class="col-md-4 mb-4">
-                        <div class="card h-100 shadow-sm">
-                            <img src="${s.photo_url || 'https://via.placeholder.com/300x200?text=Photo'}" class="card-img-top" alt="Photo de ${s.nom} ${s.prenom}" style="height: 250px; object-fit: cover;">
-                            <div class="card-body">
-                                <h5 class="card-title">Dr. ${s.nom} ${s.prenom}</h5>
-                                <p class="card-text"><strong>Spécialité :</strong> ${s.specialite}</p>
-                                <p class="card-text"><strong>Tél :</strong> ${s.telephone || 'Non renseigné'}</p>
-                                <p class="card-text"><strong>Email :</strong> ${s.email || 'Non renseigné'}</p>
-                                <p class="card-text">${s.description || ''}</p>
-                                ${s.cv_url ? `<a href="${s.cv_url}" class="btn btn-sm btn-outline-primary" target="_blank">Voir le CV</a>` : ''}
+            
+            if (specialistes && specialistes.length) {
+                container.innerHTML = specialistes.map(s => {
+                    // ✅ Utiliser les images locales selon la spécialité
+                    let imageUrl = 'images/default-doctor.png';
+                    const specialite = (s.specialite || '').toLowerCase();
+                    
+                    if (specialite.includes('cardiologue')) {
+                        imageUrl = 'images/cardiologue.jpg';
+                    } else if (specialite.includes('chirurgie') || specialite.includes('chirurgien')) {
+                        imageUrl = 'images/chirurgien.jpg';
+                    } else if (specialite.includes('pediatre') || specialite.includes('pédiatre')) {
+                        imageUrl = 'images/pediatre.jpg';
+                    } else if (specialite.includes('urologue')) {
+                        imageUrl = 'images/urologue.jpg';
+                    } else {
+                        imageUrl = 'https://via.placeholder.com/300x200?text=Dr';
+                    }
+
+                    return `
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 shadow-sm">
+                                <img src="${imageUrl}" 
+                                     class="card-img-top" 
+                                     alt="Photo de ${s.nom} ${s.prenom}" 
+                                     style="height: 250px; object-fit: cover;"
+                                     onerror="this.src='https://via.placeholder.com/300x200?text=Photo'">
+                                <div class="card-body">
+                                    <h5 class="card-title">Dr. ${s.nom || ''} ${s.prenom || ''}</h5>
+                                    <p class="card-text"><strong>Spécialité :</strong> ${s.specialite || 'Non renseigné'}</p>
+                                    <p class="card-text"><strong>Tél :</strong> ${s.telephone || 'Non renseigné'}</p>
+                                    <p class="card-text"><strong>Email :</strong> ${s.email || 'Non renseigné'}</p>
+                                    <p class="card-text">${s.description || ''}</p>
+                                </div>
+                                <div class="card-footer bg-white border-0">
+                                    ${s.cv_url ? `<a href="${s.cv_url}" class="btn btn-sm btn-outline-primary" target="_blank"><i class="fas fa-file-pdf me-1"></i>Voir le CV</a>` : ''}
+                                    <button class="btn btn-sm btn-outline-success" onclick="contacterSpecialiste(${s.id_specialiste})">
+                                        <i class="fas fa-envelope me-1"></i>Contacter
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             } else {
                 container.innerHTML = '<p class="text-center">Aucun spécialiste trouvé.</p>';
             }
         } catch (e) {
+            console.error('Erreur chargement spécialistes :', e);
             document.getElementById('specialistesList').innerHTML = '<p class="text-danger text-center">Erreur chargement.</p>';
         }
     }
+    
+    function contacterSpecialiste(id) {
+        alert(`Formulaire de contact pour le spécialiste #${id}`);
+        // window.location.href = `contact-specialiste.html?id=${id}`;
+    }
+    
     chargerSpecialistes();
 </script>
 
