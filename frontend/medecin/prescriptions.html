@@ -16,8 +16,7 @@
     <nav class="navbar-custom" style="background: #3498db;">
         <div class="container-fluid px-4">
             <span class="navbar-brand"><i class="fas fa-prescription"></i> Prescriptions</span>
-            <button class="btn btn-light btn-sm"
-                onclick="window.location.href='../dashboard-medecin.html'">Retour</button>
+            <button class="btn btn-light btn-sm" onclick="window.location.href='../dashboard-medecin.html'">Retour</button>
         </div>
     </nav>
 
@@ -31,6 +30,7 @@
 
     <script>
         (async function () {
+            // ========== VÉRIFICATION DU TOKEN ==========
             const token = localStorage.getItem('token');
             if (!token) {
                 window.location.href = '../index.html';
@@ -41,58 +41,91 @@
             try {
                 const payload = JSON.parse(atob(token.split('.')[1]));
                 medecinId = payload.id;
+                
+                // Vérification du rôle
+                if (payload.role !== 'medecin') {
+                    alert('Accès non autorisé');
+                    window.location.href = '../index.html';
+                    return;
+                }
             } catch (e) {
                 console.error('Token invalide', e);
                 window.location.href = '../index.html';
                 return;
             }
 
+            // ========== CHARGEMENT DES DONNÉES ==========
             try {
-                // ✅ Récupération des prescriptions du médecin
                 const prescriptions = await API.get(`/prescriptions/medecin/${medecinId}`);
                 console.log("📦 Prescriptions reçues :", prescriptions);
 
-                // ✅ Affichage avec utils.js (utilisation de formaterMedicament ou formaterConsultation adapté)
-                // Pour les prescriptions, on utilise un formatage spécifique
-                const container = document.getElementById('prescriptionsList');
-
-                if (prescriptions && prescriptions.length > 0) {
-                    container.innerHTML = prescriptions.map(p => {
-                        const medecinNom = p.medecin_nom || 'Médecin';
-                        const medecinPrenom = p.medecin_prenom || '';
-                        return `
-                            <div class="consultation-card mb-3">
-                                <div class="d-flex justify-content-between align-items-start">
-                                    <div>
-                                        <strong>${p.medicament || 'Médicament'}</strong>
-                                        <span class="badge-custom badge-${p.statut === 'en_cours' ? 'warning' : 'success'} ms-2">${p.statut || 'Active'}</span>
-                                    </div>
-                                    <small class="text-muted">${new Date(p.date_prescription).toLocaleDateString()}</small>
+                // ✅ Affichage avec afficherListe + formaterPrescription
+                afficherListe(
+                    'prescriptionsList',
+                    prescriptions,
+                    formaterPrescription,
+                    (p) => `
+                        <div class="consultation-card mb-3">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>${p.medicament}</strong>
+                                    <span class="badge-custom badge-${p.statutBadge} ms-2">${p.statut}</span>
                                 </div>
-                                <div class="mt-2">
-                                    <div><i class="fas fa-user me-2"></i>Patient : ${p.patient_nom || 'Inconnu'} ${p.patient_prenom || ''}</div>
-                                    <div><i class="fas fa-info-circle me-2"></i>Posologie : ${p.posologie || 'N/A'}</div>
-                                    <div><i class="fas fa-clock me-2"></i>Durée : ${p.duree || 'N/A'}</div>
-                                    ${p.instructions ? `<div><i class="fas fa-comment me-2"></i>${p.instructions}</div>` : ''}
-                                    <div><i class="fas fa-user-md me-2"></i>Médecin : ${medecinPrenom} ${medecinNom}</div>
-                                </div>
+                                <small class="text-muted">${p.date}</small>
                             </div>
-                        `;
-                    }).join('');
-                } else {
-                    container.innerHTML = '<p class="text-center text-muted">Aucune prescription trouvée</p>';
-                }
+                            <div class="mt-2">
+                                <div><i class="fas fa-user me-2"></i>Patient : ${p.patient.prenom} ${p.patient.nom}</div>
+                                <div><i class="fas fa-info-circle me-2"></i>Posologie : ${p.posologie}</div>
+                                <div><i class="fas fa-clock me-2"></i>Durée : ${p.duree}</div>
+                                ${p.instructions ? `<div><i class="fas fa-comment me-2"></i>${p.instructions}</div>` : ''}
+                                <div><i class="fas fa-user-md me-2"></i>Médecin : ${p.medecin.prenom} ${p.medecin.nom}</div>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="window.location.href='prescription-details.html?id=${p.id}'">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning me-1" onclick="window.location.href='editer-prescription.html?id=${p.id}'">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="supprimerPrescription(${p.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `
+                );
 
             } catch (e) {
-                console.error('Erreur chargement prescriptions :', e);
+                console.error('❌ Erreur chargement prescriptions :', e);
                 document.getElementById('prescriptionsList').innerHTML = `
                     <div class="alert alert-danger">
                         <i class="fas fa-exclamation-circle me-2"></i>
                         Erreur lors du chargement des prescriptions. Veuillez réessayer.
+                        <br><small class="text-muted">${e.message || ''}</small>
                     </div>
                 `;
             }
         })();
+
+        // ============================================
+        // FONCTION SUPPRIMER
+        // ============================================
+        async function supprimerPrescription(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette prescription ?')) return;
+
+            try {
+                const result = await API.delete(`/prescriptions/${id}`);
+                if (result.success) {
+                    alert('Prescription supprimée avec succès');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la suppression');
+                }
+            } catch (e) {
+                console.error('❌ Erreur suppression :', e);
+                alert('Erreur lors de la suppression');
+            }
+        }
     </script>
 </body>
 
