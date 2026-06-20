@@ -30,6 +30,10 @@ router.get('/', async (req, res) => {
                 beneficiaire:beneficiaire!inner(
                     nom,
                     prenom
+                ),
+                medecin:personnel!inner(
+                    nom,
+                    prenom
                 )
             `)
             .order('date_prescription', { ascending: false });
@@ -94,7 +98,7 @@ router.get('/patient/:id', async (req, res) => {
             .from('prescription')
             .select(`
                 *,
-                beneficiaire:beneficiaire!inner(
+                medecin:personnel!inner(
                     nom,
                     prenom
                 )
@@ -129,6 +133,10 @@ router.get('/:id', async (req, res) => {
             .select(`
                 *,
                 beneficiaire:beneficiaire!inner(
+                    nom,
+                    prenom
+                ),
+                medecin:personnel!inner(
                     nom,
                     prenom
                 )
@@ -173,6 +181,10 @@ router.get('/aujourdhui', async (req, res) => {
                 beneficiaire:beneficiaire!inner(
                     nom,
                     prenom
+                ),
+                medecin:personnel!inner(
+                    nom,
+                    prenom
                 )
             `)
             .gte('date_prescription', startOfDayISO)
@@ -194,13 +206,13 @@ router.get('/aujourdhui', async (req, res) => {
 // POST Ajouter une prescription
 // ============================================
 router.post('/', async (req, res) => {
-    const { id_beneficiaire, id_medecin, medicaments, posologie, duree, instructions, statut } = req.body;
+    const { id_beneficiaire, id_medecin, medicament, posologie, duree, instructions, statut } = req.body;
 
     // Validation des champs requis
     const errors = [];
     if (!id_beneficiaire) errors.push("ID patient requis");
     if (!id_medecin) errors.push("ID médecin requis");
-    if (!medicaments) errors.push("Médicaments requis");
+    if (!medicament) errors.push("Médicament requis");
 
     if (errors.length > 0) {
         return res.status(400).json({
@@ -238,7 +250,7 @@ router.post('/', async (req, res) => {
             .from('prescription')
             .select('id_prescription')
             .eq('id_beneficiaire', id_beneficiaire)
-            .eq('medicaments', medicaments)
+            .eq('medicament', medicament)
             .eq('statut', 'en_cours')
             .maybeSingle();
 
@@ -259,7 +271,7 @@ router.post('/', async (req, res) => {
             .insert([{
                 id_beneficiaire,
                 id_medecin,
-                medicaments: medicaments,
+                medicament: medicament,
                 posologie: posologie || '',
                 duree: duree || '',
                 instructions: instructions || '',
@@ -284,7 +296,7 @@ router.post('/', async (req, res) => {
                     nom: patient.nom,
                     prenom: patient.prenom
                 },
-                medicaments: medicaments,
+                medicament: medicament,
                 posologie: posologie || '',
                 duree: duree || '',
                 instructions: instructions || '',
@@ -308,7 +320,7 @@ router.put('/:id', async (req, res) => {
         return res.status(400).json({ error: "ID invalide" });
     }
 
-    const { medicaments, posologie, duree, instructions, statut } = req.body;
+    const { medicament, posologie, duree, instructions, statut } = req.body;
 
     try {
         // Vérifier que la prescription existe
@@ -324,7 +336,7 @@ router.put('/:id', async (req, res) => {
 
         // Construire les mises à jour
         const updates = {};
-        if (medicaments !== undefined) updates.medicaments = medicaments;
+        if (medicament !== undefined) updates.medicament = medicament;
         if (posologie !== undefined) updates.posologie = posologie;
         if (duree !== undefined) updates.duree = duree;
         if (instructions !== undefined) updates.instructions = instructions;
