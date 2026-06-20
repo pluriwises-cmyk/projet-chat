@@ -91,25 +91,31 @@ app.use('/api/documents', require('./routes/documents'));
 app.use('/api/stats', require('./routes/stats'));
 
 // ============================================
-// STATISTIQUES MÉDECIN (Version Supabase)
+// STATISTIQUES MÉDECIN (CORRIGÉE)
 // ============================================
 app.get('/api/stats/medecin/:id', async (req, res) => {
     const id = req.params.id;
-    const today = new Date().toISOString().split('T')[0];
 
     if (!id || isNaN(id)) {
         return res.status(400).json({ error: "ID médecin invalide" });
     }
 
     try {
-        // Exécution en parallèle
+        // ✅ Date du jour au format ISO (début et fin)
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const dateStr = `${year}-${month}-${day}`;
+
         const [consultationsJour, patientsTotal, rdvJour, rdvAttente] = await Promise.all([
-            // Consultations du jour
+            // ✅ Consultations du jour (avec intervalle)
             supabase
                 .from('consultation')
                 .select('*', { count: 'exact', head: true })
                 .eq('id_medecin', id)
-                .gte('date_heure', today),
+                .gte('date_heure', `${dateStr}T00:00:00`)
+                .lte('date_heure', `${dateStr}T23:59:59`),
 
             // Patients distincts
             supabase
@@ -117,12 +123,13 @@ app.get('/api/stats/medecin/:id', async (req, res) => {
                 .select('id_beneficiaire', { count: 'exact', head: true })
                 .eq('id_medecin', id),
 
-            // Rendez-vous du jour
+            // ✅ Rendez-vous du jour
             supabase
                 .from('rendez_vous')
                 .select('*', { count: 'exact', head: true })
                 .eq('id_medecin', id)
-                .gte('date_rdv', today),
+                .gte('date_rdv', `${dateStr}T00:00:00`)
+                .lte('date_rdv', `${dateStr}T23:59:59`),
 
             // Rendez-vous en attente
             supabase
