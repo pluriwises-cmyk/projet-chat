@@ -5,21 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mon Espace Patient - CHAT -</title>
     
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    
-    <!-- NOTRE CSS GLOBAL -->
     <link rel="stylesheet" href="css/style.css">
-    
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/api.js"></script>
     
     <style>
-        /* Styles supplémentaires si besoin */
         .consultation-card {
             background: white;
             border-radius: 12px;
@@ -67,11 +59,168 @@
             font-weight: 500;
             font-size: 0.9rem;
         }
+        .patient-sidebar {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+        }
+        .patient-avatar-large {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #3498db, #2ecc71);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: white;
+            margin: 0 auto 15px;
+        }
+        .patient-name {
+            text-align: center;
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .patient-info {
+            text-align: center;
+            font-size: 0.85rem;
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+        .patient-menu {
+            list-style: none;
+            padding: 0;
+        }
+        .patient-menu li {
+            margin-bottom: 5px;
+        }
+        .patient-menu a {
+            display: block;
+            padding: 10px 15px;
+            border-radius: 10px;
+            color: #2c3e50;
+            text-decoration: none;
+            transition: all 0.3s;
+        }
+        .patient-menu a:hover,
+        .patient-menu a.active {
+            background: rgba(52,152,219,0.1);
+            color: #3498db;
+        }
+        .patient-menu a i {
+            width: 25px;
+            color: #7f8c8d;
+        }
+        .patient-menu a.active i {
+            color: #3498db;
+        }
+        .patient-section {
+            display: none;
+        }
+        .patient-section.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .date-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            color: white;
+            font-size: 0.85rem;
+        }
+        .quick-actions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        .quick-action-card {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .quick-action-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+        .quick-action-card i {
+            font-size: 2rem;
+            color: #3498db;
+            display: block;
+            margin-bottom: 10px;
+        }
+        .quick-action-card span {
+            font-weight: 500;
+        }
+        .card-custom {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+        .card-header-custom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .card-header-custom h5 {
+            margin: 0;
+            font-weight: 600;
+        }
+        .badge-custom {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 500;
+        }
+        .badge-success { background: #d4edda; color: #155724; }
+        .badge-warning { background: #fff3cd; color: #856404; }
+        .badge-danger { background: #f8d7da; color: #721c24; }
+        .badge-info { background: #d1ecf1; color: #0c5460; }
+        .prescription-card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+        }
+        .prescription-title { font-weight: 600; }
+        .prescription-date { font-size: 0.8rem; color: #7f8c8d; }
+        .prescription-doctor { font-size: 0.85rem; color: #2c3e50; }
     </style>
 </head>
 <body>
 
-<!-- Navigation -->
 <nav class="navbar navbar-custom" style="background: linear-gradient(135deg, #3498db, #2980b9);">
     <div class="container-fluid px-4">
         <span class="navbar-brand">
@@ -94,15 +243,11 @@
     </div>
 </nav>
 
-<!-- Main Content -->
 <div class="container-fluid px-4 py-4">
     <div class="row">
-        <!-- Sidebar Patient -->
         <div class="col-lg-3">
             <div class="patient-sidebar">
-                <div class="patient-avatar-large" id="sidebar-avatar">
-                    P
-                </div>
+                <div class="patient-avatar-large" id="sidebar-avatar">P</div>
                 <div class="patient-name" id="sidebar-name">Chargement...</div>
                 <div class="patient-info" id="sidebar-info">
                     <i class="fas fa-envelope me-2"></i><span id="sidebar-email">...</span><br>
@@ -114,12 +259,10 @@
                     <li><a href="#" class="active" onclick="showPatientSection('dashboard')"><i class="fas fa-tachometer-alt"></i> Tableau de bord</a></li>
                     <li><a href="#" onclick="showPatientSection('rendezvous')"><i class="fas fa-calendar-check"></i> Mes rendez-vous</a></li>
                     <li><a href="#" onclick="showPatientSection('dossier')"><i class="fas fa-folder-open"></i> Mon dossier</a></li>
-                    <li><a href="#" onclick="voirFactures()"><i class="fas fa-file-invoice"></i> Factures</a></li>
-                    <li><a href="#" onclick="prescriptions()"><i class="fas fa-prescription"></i> Prescriptions</a></li>
+                    <li><a href="#" onclick="showPatientSection('prescriptions')"><i class="fas fa-prescription"></i> Prescriptions</a></li>
                     <li><a href="#" onclick="showPatientSection('factures')"><i class="fas fa-file-invoice"></i> Factures</a></li>
-                  <li><a href="#" onclick="voirMessages()"><i class="fas fa-envelope"></i> Messages</a></li>
-                   <li><a href="#" onclick="voirDocuments()"><i class="fas fa-file-pdf"></i> Mes documents</a></li>
-                    
+                    <li><a href="#" onclick="showPatientSection('messages')"><i class="fas fa-envelope"></i> Messages</a></li>
+                    <li><a href="#" onclick="showPatientSection('documents')"><i class="fas fa-file-pdf"></i> Mes documents</a></li>
                 </ul>
                 
                 <hr>
@@ -131,12 +274,9 @@
             </div>
         </div>
         
-        <!-- Contenu Principal -->
         <div class="col-lg-9">
             
-            <!-- SECTION DASHBOARD -->
             <div id="patient-dashboard" class="patient-section active">
-                <!-- Quick Actions -->
                 <div class="quick-actions-grid">
                     <div class="quick-action-card" onclick="prendreRendezVous()">
                         <i class="fas fa-calendar-plus"></i><span>Prendre RDV</span>
@@ -152,7 +292,6 @@
                     </div>
                 </div>
                 
-                <!-- Stats Row -->
                 <div class="row">
                     <div class="col-md-3">
                         <div class="stat-card">
@@ -188,7 +327,6 @@
                     </div>
                 </div>
                 
-                <!-- Prochains rendez-vous -->
                 <div class="card-custom">
                     <div class="card-header-custom">
                         <h5><i class="fas fa-calendar-alt me-2" style="color: var(--patient);"></i>Vos prochains rendez-vous</h5>
@@ -199,7 +337,6 @@
                     </div>
                 </div>
                 
-                <!-- Dernières prescriptions et messages -->
                 <div class="row">
                     <div class="col-md-6">
                         <div class="card-custom">
@@ -224,7 +361,6 @@
                 </div>
             </div>
             
-            <!-- SECTION RENDEZ-VOUS -->
             <div id="patient-rendezvous" class="patient-section">
                 <div class="card-custom">
                     <div class="card-header-custom">
@@ -242,7 +378,6 @@
                 </div>
             </div>
             
-            <!-- SECTION DOSSIER MEDICAL -->
             <div id="patient-dossier" class="patient-section">
                 <div class="card-custom">
                     <div class="card-header-custom">
@@ -254,7 +389,6 @@
                 </div>
             </div>
             
-            <!-- SECTION PRESCRIPTIONS -->
             <div id="patient-prescriptions" class="patient-section">
                 <div class="card-custom">
                     <div class="card-header-custom">
@@ -266,7 +400,6 @@
                 </div>
             </div>
             
-            <!-- SECTION FACTURES -->
             <div id="patient-factures" class="patient-section">
                 <div class="card-custom">
                     <div class="card-header-custom">
@@ -278,7 +411,6 @@
                 </div>
             </div>
             
-            <!-- SECTION MESSAGES -->
             <div id="patient-messages" class="patient-section">
                 <div class="card-custom">
                     <div class="card-header-custom">
@@ -291,7 +423,6 @@
                 </div>
             </div>
             
-            <!-- SECTION DOCUMENTS -->
             <div id="patient-documents" class="patient-section">
                 <div class="card-custom">
                     <div class="card-header-custom">
@@ -317,7 +448,8 @@
     
     function showPatientSection(section) {
         document.querySelectorAll('.patient-section').forEach(s => s.classList.remove('active'));
-        document.getElementById('patient-' + section).classList.add('active');
+        const target = document.getElementById('patient-' + section);
+        if (target) target.classList.add('active');
         
         document.querySelectorAll('.patient-menu a').forEach(link => link.classList.remove('active'));
         const links = document.querySelectorAll('.patient-menu a');
@@ -330,139 +462,137 @@
     }
     
     async function loadPatientData() {
-    const token = localStorage.getItem('token');
-    if (!token) {
-        window.location.href = 'index.html';
-        return;
-    }
-
-    try {
-        const payload = JSON.parse(atob(token.split('.')[1]));
-        currentPatientId = payload.id;
-
-        // Récupérer les infos du patient depuis l'API
-        const response = await fetch(`https://clinique-hoteliere-et-actions.onrender.com/api/beneficiaires/${currentPatientId}`);
-        const patient = await response.json();
-
-        // Mettre à jour l'interface
-        document.getElementById('user-name').textContent = `${patient.prenom || ''} ${patient.nom || ''}`;
-        document.getElementById('user-info').textContent = `N° ${currentPatientId}`;
-        document.getElementById('sidebar-name').textContent = `${patient.prenom || ''} ${patient.nom || ''}`;
-        document.getElementById('sidebar-email').textContent = patient.email || 'Non renseigné';
-        document.getElementById('sidebar-phone').textContent = patient.telephone || 'Non renseigné';
-        document.getElementById('sidebar-id').textContent = currentPatientId;
-
-        const initiales = (patient.prenom?.[0] || 'P') + (patient.nom?.[0] || '');
-        document.getElementById('user-initials').textContent = initiales;
-        document.getElementById('sidebar-avatar').textContent = initiales;
-
-        // Récupérer les vrais rendez-vous
-        await chargerRendezVous(currentPatientId);
-
-        // Récupérer les vraies prescriptions
-        await chargerPrescriptions(currentPatientId);
-
-        // Récupérer les vraies factures
-        await chargerFactures(currentPatientId);
-
-    } catch (e) {
-        console.error('Erreur chargement patient:', e);
-        window.location.href = 'index.html';
-    }
-}
-async function chargerRendezVous(patientId) {
-    try {
-        const response = await fetch(`https://clinique-hoteliere-et-actions.onrender.com/api/rendez-vous/patient/${patientId}`);
-        const rdvs = await response.json();
-        const container = document.getElementById('prochains-rdv-container');
+        const token = localStorage.getItem('token');
+        console.log('🔍 Token récupéré:', token);
         
-        if (rdvs && rdvs.length > 0) {
-            container.innerHTML = rdvs.map(r => `
-                <div class="col-md-6">
-                    <div class="consultation-card">
-                        <div><strong>${new Date(r.date_rdv).toLocaleDateString()} ${new Date(r.date_rdv).toLocaleTimeString()}</strong> - ${r.medecin_nom || 'Médecin'}</div>
-                        <div>${r.motif || 'Consultation'}</div>
-                        <span class="badge-custom badge-success">${r.statut}</span>
-                    </div>
-                </div>
-            `).join('');
-            document.getElementById('prochains-rdv').textContent = rdvs.length;
-        } else {
-            container.innerHTML = '<div class="col-12 text-center text-muted py-4">Aucun rendez-vous prévu</div>';
+        if (!token) {
+            console.log('❌ Pas de token, redirection vers index.html');
+            window.location.href = 'index.html';
+            return;
         }
-    } catch (e) {
-        console.error('Erreur chargement rendez-vous:', e);
-    }
-}
 
-async function chargerPrescriptions(patientId) {
-    try {
-        const response = await fetch(`https://clinique-hoteliere-et-actions.onrender.com/api/prescriptions/patient/${patientId}`);
-        const prescriptions = await response.json();
-        const container = document.getElementById('dernieres-prescriptions-container');
-        
-        if (prescriptions && prescriptions.length > 0) {
-            container.innerHTML = prescriptions.map(p => `
-                <div class="prescription-card">
-                    <div class="d-flex justify-content-between">
-                        <div>
-                            <div class="prescription-title">${p.medicament}</div>
-                            <div class="prescription-date">Prescrit le ${new Date(p.date_prescription).toLocaleDateString()}</div>
+        try {
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            currentPatientId = payload.id;
+            console.log('✅ ID Patient:', currentPatientId);
+
+            // Récupérer les infos du patient
+            const response = await fetch(`https://clinique-hoteliere-et-actions.onrender.com/api/beneficiaires/${currentPatientId}`);
+            if (!response.ok) throw new Error('Erreur récupération patient');
+            const patient = await response.json();
+
+            // Mettre à jour l'interface
+            document.getElementById('user-name').textContent = `${patient.prenom || ''} ${patient.nom || ''}`;
+            document.getElementById('user-info').textContent = `N° ${currentPatientId}`;
+            document.getElementById('sidebar-name').textContent = `${patient.prenom || ''} ${patient.nom || ''}`;
+            document.getElementById('sidebar-email').textContent = patient.email || 'Non renseigné';
+            document.getElementById('sidebar-phone').textContent = patient.telephone || 'Non renseigné';
+            document.getElementById('sidebar-id').textContent = currentPatientId;
+
+            const initiales = (patient.prenom?.[0] || 'P') + (patient.nom?.[0] || '');
+            document.getElementById('user-initials').textContent = initiales;
+            document.getElementById('sidebar-avatar').textContent = initiales;
+
+            // Charger les rendez-vous
+            await chargerRendezVous(currentPatientId);
+            await chargerPrescriptions(currentPatientId);
+            await chargerFactures(currentPatientId);
+
+        } catch (e) {
+            console.error('❌ Erreur chargement patient:', e);
+            window.location.href = 'index.html';
+        }
+    }
+
+    async function chargerRendezVous(patientId) {
+        try {
+            const response = await fetch(`https://clinique-hoteliere-et-actions.onrender.com/api/rendez-vous/patient/${patientId}`);
+            const rdvs = await response.json();
+            const container = document.getElementById('prochains-rdv-container');
+            
+            if (rdvs && rdvs.length > 0) {
+                container.innerHTML = rdvs.map(r => `
+                    <div class="col-md-6">
+                        <div class="consultation-card">
+                            <div><strong>${new Date(r.date_rdv).toLocaleDateString()} ${new Date(r.date_rdv).toLocaleTimeString()}</strong></div>
+                            <div>Médecin: ${r.medecin_nom || 'Non attribué'}</div>
+                            <div>${r.motif || 'Consultation'}</div>
+                            <span class="badge-custom badge-success">${r.statut}</span>
                         </div>
-                        <div class="prescription-doctor">${p.medecin_nom || 'Médecin'}</div>
                     </div>
-                    <div class="mt-2 small">
-                        <span class="badge bg-warning">${p.statut}</span>
-                        <span class="ms-2">${p.posologie}</span>
-                    </div>
-                </div>
-            `).join('');
-            document.getElementById('prescriptions-actives').textContent = prescriptions.length;
-        } else {
-            container.innerHTML = '<p class="text-center text-muted py-3">Aucune prescription</p>';
+                `).join('');
+                document.getElementById('prochains-rdv').textContent = rdvs.length;
+            } else {
+                container.innerHTML = '<div class="col-12 text-center text-muted py-4">Aucun rendez-vous prévu</div>';
+            }
+        } catch (e) {
+            console.error('Erreur chargement rendez-vous:', e);
         }
-    } catch (e) {
-        console.error('Erreur chargement prescriptions:', e);
     }
-}
 
-async function chargerFactures(patientId) {
-    try {
-        const response = await fetch(`https://clinique-hoteliere-et-actions.onrender.com/api/factures/patient/${patientId}`);
-        const factures = await response.json();
-        const container = document.getElementById('factures-table-body');
-        
-        if (factures && factures.length > 0) {
-            container.innerHTML = factures.map(f => `
-                <div class="consultation-card mb-2">
-                    <strong>Facture ${f.numero || f.id_facture}</strong><br>
-                    Date : ${new Date(f.date_emission).toLocaleDateString()}<br>
-                    Montant : ${f.montant_ttc} FCFA<br>
-                    <span class="badge-custom badge-${f.statut === 'payee' ? 'success' : 'warning'}">${f.statut}</span>
-                </div>
-            `).join('');
-            document.getElementById('factures-attente').textContent = factures.filter(f => f.statut !== 'payee').length;
-        } else {
-            container.innerHTML = '<p class="text-muted text-center py-3">Aucune facture</p>';
+    async function chargerPrescriptions(patientId) {
+        try {
+            const response = await fetch(`https://clinique-hoteliere-et-actions.onrender.com/api/prescriptions/patient/${patientId}`);
+            const prescriptions = await response.json();
+            const container = document.getElementById('dernieres-prescriptions-container');
+            
+            if (prescriptions && prescriptions.length > 0) {
+                container.innerHTML = prescriptions.slice(0, 3).map(p => `
+                    <div class="prescription-card">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <div class="prescription-title">${p.medicament || 'Médicament'}</div>
+                                <div class="prescription-date">Prescrit le ${new Date(p.date_prescription).toLocaleDateString()}</div>
+                            </div>
+                            <div class="prescription-doctor">${p.medecin_nom || 'Médecin'}</div>
+                        </div>
+                        <div class="mt-2 small">
+                            <span class="badge bg-warning">${p.statut || 'active'}</span>
+                            <span class="ms-2">${p.posologie || ''}</span>
+                        </div>
+                    </div>
+                `).join('');
+                document.getElementById('prescriptions-actives').textContent = prescriptions.length;
+            } else {
+                container.innerHTML = '<p class="text-center text-muted py-3">Aucune prescription</p>';
+            }
+        } catch (e) {
+            console.error('Erreur chargement prescriptions:', e);
         }
-    } catch (e) {
-        console.error('Erreur chargement factures:', e);
     }
-}
+
+    async function chargerFactures(patientId) {
+        try {
+            const response = await fetch(`https://clinique-hoteliere-et-actions.onrender.com/api/factures/patient/${patientId}`);
+            const factures = await response.json();
+            const container = document.getElementById('factures-table-body');
+            
+            if (factures && factures.length > 0) {
+                container.innerHTML = factures.map(f => `
+                    <div class="consultation-card mb-2">
+                        <strong>Facture ${f.numero || f.id_facture}</strong><br>
+                        Date : ${new Date(f.date_emission).toLocaleDateString()}<br>
+                        Montant : ${f.montant_ttc} FCFA<br>
+                        <span class="badge-custom badge-${f.statut === 'payee' ? 'success' : 'warning'}">${f.statut}</span>
+                    </div>
+                `).join('');
+                document.getElementById('factures-attente').textContent = factures.filter(f => f.statut !== 'payee').length;
+            } else {
+                container.innerHTML = '<p class="text-muted text-center py-3">Aucune facture</p>';
+            }
+        } catch (e) {
+            console.error('Erreur chargement factures:', e);
+        }
+    }
     
-    function prendreRendezVous() {    window.location.href = 'ajout-rendezvous.html';}
-   function consulterDossier() {    window.location.href = 'dossier-patient.html';}
+    function prendreRendezVous() { window.location.href = 'ajout-rendezvous.html'; }
+    function consulterDossier() { window.location.href = 'dossier-patient.html'; }
     function contacterMedecin() { alert('Formulaire de contact médecin'); }
     function payerFacture() { showPatientSection('factures'); }
-    function voirTousRdv() {    window.location.href = 'mes-rdv.html';}
-   function voirMessages() {    window.location.href = 'messages-patient.html';}
-   function voirDocuments() {    window.location.href = 'documents-patient.html';}
-    function prescriptions() {    window.location.href = 'prescriptions-patient.html';}
+    function voirTousRdv() { window.location.href = 'mes-rdv.html'; }
+    function nouveauMessage() { window.location.href = 'messages-patient.html'; }
+    function uploadDocument() { window.location.href = 'documents-patient.html'; }
     function deconnexion() { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = 'index.html'; }
-   function voirFactures() {
-    console.log('voirFactures() appelée');
-    window.location.href = 'factures-patient.html';
-}
 
     document.addEventListener('DOMContentLoaded', function() {
         updateDate();
@@ -471,8 +601,6 @@ async function chargerFactures(patientId) {
     });
 </script>
 
-<!-- Bootstrap JS -->
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 </body>
 </html>
