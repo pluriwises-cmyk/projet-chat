@@ -278,7 +278,7 @@
         .catch(() => showError('Erreur connexion'));
     }
 
-    // ✅ FONCTION VERIFIER CODE AVEC LOGS
+    // ✅ VERSION AVEC SÉCURITÉ ET LOGS
     function verifierCode() {
         let inputs = document.querySelectorAll('.code-box'), code = ''; 
         inputs.forEach(i => code += i.value);
@@ -291,55 +291,57 @@
         })
         .then(res => res.json())
         .then(data => {
-            // ✅ LOG 1 : Voir ce que le serveur renvoie
-            console.log("📦 Données reçues du serveur :", data);
+            console.log("📦 Données reçues :", data);
+            console.log("🎯 Valeur de data.role reçue :", data.role);
             
             if (data.success) {
-                // Stockage du token et de l'utilisateur
                 if (data.token) {
                     localStorage.setItem('token', data.token);
-                    console.log("✅ Token stocké :", data.token);
+                    console.log("✅ Token stocké");
                 }
                 if (data.user) {
                     localStorage.setItem('user', JSON.stringify(data.user));
-                    console.log("✅ Utilisateur stocké :", data.user);
+                    console.log("✅ Utilisateur stocké");
                 }
                 
-                // ✅ LOG 2 : Voir quel rôle est détecté
-                console.log("🎯 Rôle détecté :", data.role);
+                // ✅ SÉCURITÉ : Vérifier que le rôle est présent
+                if (!data.role) {
+                    console.error("❌ ERREUR : Aucun rôle n'a été renvoyé par le serveur !");
+                    showError("Erreur d'authentification : Rôle non défini.");
+                    return; // Arrête la fonction
+                }
                 
                 updateSteps(3);
                 
-                // ✅ LOG 3 : Voir où on va rediriger
-                let redirectUrl = 'index.html';
-                if (data.role === 'patient') {
-                    redirectUrl = 'dashboard-patient.html';
-                } else if (data.role === 'medecin') {
-                    redirectUrl = 'dashboard-medecin.html';
-                } else if (data.role === 'infirmier') {
-                    redirectUrl = 'dashboard-infirmier.html';
-                } else if (data.role === 'administratif') {
-                    redirectUrl = 'dashboard-admin.html';
-                } else if (data.role === 'hotellerie') {
-                    redirectUrl = 'hotellerie.html';
-                } else if (data.role === 'logistique') {
-                    redirectUrl = 'stocks.html';
-                } else if (data.role === 'qualite') {
-                    redirectUrl = 'qualite.html';
-                } else if (data.role === 'voyages') {
-                    redirectUrl = 'voyages.html';
-                } else if (data.role === 'chauffeur') {
-                    redirectUrl = 'voyages.html';
-                } else if (data.role === 'direction' || data.role === 'boss') {
-                    redirectUrl = 'dashboard-direction.html';
-                } else {
-                    redirectUrl = 'index.html';
-                }
-                
-                console.log("🔀 Redirection vers :", redirectUrl);
-                
-                setTimeout(() => { 
-                    window.location.href = redirectUrl; 
+                // ✅ Redirection après 2 secondes
+                setTimeout(() => {
+                    let url = 'index.html';
+                    if (data.role === 'patient') {
+                        url = 'dashboard-patient.html';
+                    } else if (data.role === 'medecin') {
+                        url = 'dashboard-medecin.html';
+                    } else if (data.role === 'infirmier') {
+                        url = 'dashboard-infirmier.html';
+                    } else if (data.role === 'administratif') {
+                        url = 'dashboard-admin.html';
+                    } else if (data.role === 'hotellerie') {
+                        url = 'hotellerie.html';
+                    } else if (data.role === 'logistique') {
+                        url = 'stocks.html';
+                    } else if (data.role === 'qualite') {
+                        url = 'qualite.html';
+                    } else if (data.role === 'voyages') {
+                        url = 'voyages.html';
+                    } else if (data.role === 'direction' || data.role === 'boss') {
+                        url = 'dashboard-direction.html';
+                    } else if (data.role === 'chauffeur') {
+                        url = 'voyages.html';
+                    } else if (data.require_inscription) {
+                        url = 'inscription-patient.html?tel=' + encodeURIComponent(currentPhone);
+                    }
+                    
+                    console.log("🔀 Redirection vers :", url);
+                    window.location.href = url;
                 }, 2000);
                 
             } else {
