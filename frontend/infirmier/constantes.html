@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="../css/style.css">
     <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
 </head>
 
 <body>
@@ -30,21 +31,49 @@
 
     <script>
         (async function () {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '../index.html';
+                return;
+            }
+
             try {
-                const constantes = await API.get('/constantes');
-                const container = document.getElementById('constantesList');
-                if (constantes.length) {
-                    container.innerHTML = constantes.map(c => `
-                        <div class="consultation-card mb-2" style="border-left-color: #1abc9c;">
-                            <strong>${c.nom || '?'} ${c.prenom || '?'}</strong> – Chambre ${c.chambre || '?'}<br>
-                            TA: ${c.tension || '?'} | Pouls: ${c.pouls || '?'} | Temp: ${c.temperature || '?'}°C | Sat: ${c.saturation || '?'}%
+                const constantes = await API.getConstantes();
+                console.log("📦 Constantes reçues :", constantes);
+
+                // ✅ Affichage avec afficherListe + formaterConstante
+                afficherListe(
+                    'constantesList',
+                    constantes,
+                    formaterConstante,
+                    (f) => `
+                        <div class="consultation-card mb-3" style="border-left-color: #1abc9c;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>${f.patientPrenom} ${f.patient}</strong>
+                                    <span class="badge bg-info ms-2">Ch. ${f.chambre}</span>
+                                </div>
+                                <small class="text-muted">${f.date}</small>
+                            </div>
+                            <div class="mt-2">
+                                <div><i class="fas fa-heartbeat me-2"></i>TA: ${f.tension}</div>
+                                <div><i class="fas fa-heart me-2"></i>Pouls: ${f.pouls}</div>
+                                <div><i class="fas fa-thermometer-half me-2"></i>Température: ${f.temperature}°C</div>
+                                <div><i class="fas fa-lungs me-2"></i>Saturation: ${f.saturation}%</div>
+                            </div>
                         </div>
-                    `).join('');
-                } else {
-                    container.innerHTML = '<p class="text-muted">Aucune constante trouvée.</p>';
-                }
+                    `
+                );
+
             } catch (e) {
-                document.getElementById('constantesList').innerHTML = '<p class="text-danger">Erreur chargement.</p>';
+                console.error('❌ Erreur chargement constantes :', e);
+                document.getElementById('constantesList').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Erreur lors du chargement des constantes. Veuillez réessayer.
+                        <br><small class="text-muted">${e.message || ''}</small>
+                    </div>
+                `;
             }
         })();
     </script>
