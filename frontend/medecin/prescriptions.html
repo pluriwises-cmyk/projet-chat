@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="../css/style.css">
     <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
 </head>
 
 <body>
@@ -30,18 +31,66 @@
 
     <script>
         (async function () {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '../index.html';
+                return;
+            }
+
+            let medecinId = null;
             try {
-                const prescriptions = await API.get('/prescriptions');
-                const container = document.getElementById('prescriptionsList');
-                container.innerHTML = prescriptions.map(p => `
-                    <div class="consultation-card mb-2">
-                        <strong>${p.nom} ${p.prenom}</strong><br>
-                        ${p.medicament} – ${p.posologie}<br>
-                        <span class="badge-custom badge-${p.statut === 'en_cours' ? 'warning' : 'success'}">${p.statut}</span>
-                    </div>
-                `).join('');
+                const payload = JSON.parse(atob(token.split('.')[1]));
+                medecinId = payload.id;
             } catch (e) {
-                container.innerHTML = '<p class="text-danger">Erreur chargement.</p>';
+                console.error('Token invalide', e);
+                window.location.href = '../index.html';
+                return;
+            }
+
+            try {
+                // ✅ Récupération des prescriptions du médecin
+                const prescriptions = await API.get(`/prescriptions/medecin/${medecinId}`);
+                console.log("📦 Prescriptions reçues :", prescriptions);
+
+                // ✅ Affichage avec utils.js (utilisation de formaterMedicament ou formaterConsultation adapté)
+                // Pour les prescriptions, on utilise un formatage spécifique
+                const container = document.getElementById('prescriptionsList');
+
+                if (prescriptions && prescriptions.length > 0) {
+                    container.innerHTML = prescriptions.map(p => {
+                        const medecinNom = p.medecin_nom || 'Médecin';
+                        const medecinPrenom = p.medecin_prenom || '';
+                        return `
+                            <div class="consultation-card mb-3">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div>
+                                        <strong>${p.medicament || 'Médicament'}</strong>
+                                        <span class="badge-custom badge-${p.statut === 'en_cours' ? 'warning' : 'success'} ms-2">${p.statut || 'Active'}</span>
+                                    </div>
+                                    <small class="text-muted">${new Date(p.date_prescription).toLocaleDateString()}</small>
+                                </div>
+                                <div class="mt-2">
+                                    <div><i class="fas fa-user me-2"></i>Patient : ${p.patient_nom || 'Inconnu'} ${p.patient_prenom || ''}</div>
+                                    <div><i class="fas fa-info-circle me-2"></i>Posologie : ${p.posologie || 'N/A'}</div>
+                                    <div><i class="fas fa-clock me-2"></i>Durée : ${p.duree || 'N/A'}</div>
+                                    ${p.instructions ? `<div><i class="fas fa-comment me-2"></i>${p.instructions}</div>` : ''}
+                                    <div><i class="fas fa-user-md me-2"></i>Médecin : ${medecinPrenom} ${medecinNom}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    container.innerHTML = '<p class="text-center text-muted">Aucune prescription trouvée</p>';
+                }
+
+            } catch (e) {
+                console.error('Erreur chargement prescriptions :', e);
+                document.getElementById('prescriptionsList').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Erreur lors du chargement des prescriptions. Veuillez réessayer.
+                    </div>
+                `;
             }
         })();
     </script>
