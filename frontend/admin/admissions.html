@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="../css/style.css">
     <script src="../js/api.js"></script>
+    <script src="../js/utils.js"></script>
 </head>
 
 <body>
@@ -30,21 +31,120 @@
 
     <script>
         (async function () {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = '../index.html';
+                return;
+            }
+
             try {
                 const admissions = await API.get('/admissions');
-                const container = document.getElementById('admissionsList');
-                container.innerHTML = admissions.map(a => `
-                    <div class="consultation-card mb-2" style="border-left-color: #8e44ad;">
-                        <strong>${a.nom} ${a.prenom}</strong><br>
-                        Service : ${a.service} – Médecin : ${a.medecin}<br>
-                        Date : ${a.date_admission}<br>
-                        <span class="badge-custom badge-${a.statut === 'termine' ? 'success' : a.statut === 'en_attente' ? 'warning' : 'info'}">${a.statut}</span>
-                    </div>
-                `).join('');
+                console.log("📦 Admissions reçues :", admissions);
+
+                // ✅ Fonction de formatage spécifique pour les admissions
+                function formaterAdmission(a) {
+                    return {
+                        id: a.id_admission || a.id,
+                        patient: {
+                            nom: a.nom || a.patient_nom || 'Inconnu',
+                            prenom: a.prenom || a.patient_prenom || ''
+                        },
+                        service: a.service || 'N/A',
+                        medecin: a.medecin || 'Non attribué',
+                        date: a.date_admission ? new Date(a.date_admission).toLocaleString() : 'Date inconnue',
+                        statut: a.statut || 'En attente',
+                        statutBadge: a.statut === 'termine' ? 'success' : a.statut === 'en_attente' ? 'warning' : 'info',
+                        chambre: a.chambre || a.id_chambre || 'N/A'
+                    };
+                }
+
+                // ✅ Affichage avec afficherListe
+                afficherListe(
+                    'admissionsList',
+                    admissions,
+                    formaterAdmission,
+                    (f) => `
+                        <div class="consultation-card mb-3" style="border-left-color: #8e44ad;">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>${f.patient.prenom} ${f.patient.nom}</strong>
+                                    <span class="badge-custom badge-${f.statutBadge} ms-2">${f.statut}</span>
+                                </div>
+                                <small class="text-muted">${f.date}</small>
+                            </div>
+                            <div class="mt-2">
+                                <div><i class="fas fa-stethoscope me-2"></i>Service: ${f.service}</div>
+                                <div><i class="fas fa-user-md me-2"></i>Médecin: ${f.medecin}</div>
+                                <div><i class="fas fa-door-open me-2"></i>Chambre: ${f.chambre}</div>
+                            </div>
+                            <div class="mt-2">
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="window.location.href='admission-details.html?id=${f.id}'">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning me-1" onclick="window.location.href='editer-admission.html?id=${f.id}'">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                ${f.statut !== 'termine' ? `
+                                    <button class="btn btn-sm btn-outline-success me-1" onclick="terminerAdmission(${f.id})">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                ` : ''}
+                                <button class="btn btn-sm btn-outline-danger" onclick="supprimerAdmission(${f.id})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `
+                );
+
             } catch (e) {
-                container.innerHTML = '<p class="text-danger">Erreur chargement.</p>';
+                console.error('❌ Erreur chargement admissions :', e);
+                document.getElementById('admissionsList').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Erreur lors du chargement des admissions. Veuillez réessayer.
+                        <br><small class="text-muted">${e.message || ''}</small>
+                    </div>
+                `;
             }
         })();
+
+        // ============================================
+        // FONCTIONS ACTIONS
+        // ============================================
+        async function terminerAdmission(id) {
+            if (!confirm('Confirmer la fin de cette admission ?')) return;
+
+            try {
+                const result = await API.patch(`/admissions/${id}/statut`, { statut: 'termine' });
+                if (result.success) {
+                    alert('Admission terminée avec succès');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la mise à jour');
+                }
+            } catch (e) {
+                console.error('❌ Erreur :', e);
+                alert('Erreur lors de la mise à jour');
+            }
+        }
+
+        async function supprimerAdmission(id) {
+            if (!confirm('Êtes-vous sûr de vouloir supprimer cette admission ?')) return;
+
+            try {
+                const result = await API.delete(`/admissions/${id}`);
+                if (result.success) {
+                    alert('Admission supprimée avec succès');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la suppression');
+                }
+            } catch (e) {
+                console.error('❌ Erreur suppression :', e);
+                alert('Erreur lors de la suppression');
+            }
+        }
     </script>
 </body>
 
