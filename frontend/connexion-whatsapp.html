@@ -160,7 +160,6 @@
     </div>
 
     <div class="whatsapp-body">
-        <!-- Indicateur d'étapes -->
         <div class="steps-indicator">
             <div class="step-item active" id="step1-indicator"><div class="step-number">1</div><div class="step-label">Numéro</div></div>
             <div class="step-item" id="step2-indicator"><div class="step-number">2</div><div class="step-label">Code</div></div>
@@ -169,7 +168,6 @@
 
         <div id="errorMessage" class="alert alert-danger d-none mt-2"></div>
 
-        <!-- ÉTAPE 1 : Numéro -->
         <div id="step1" class="step-content active">
             <div class="mb-3">
                 <label class="fw-bold"><i class="fas fa-phone-alt me-2 text-success"></i>Votre numéro WhatsApp</label>
@@ -185,16 +183,13 @@
             <div class="text-center mt-3"><a href="index.html" class="text-decoration-none small">← Retour à l'accueil</a></div>
         </div>
 
-        <!-- ÉTAPE 2 : Code -->
         <div id="step2" class="step-content">
             <div class="alert alert-info text-center py-2">📲 Code envoyé au <strong id="phoneDisplay"></strong></div>
-            
             <div class="display-code">
                 <i class="fas fa-key me-2 text-success"></i><strong>Votre code de vérification</strong>
                 <input type="text" id="receivedCode" class="form-control text-center mt-2" readonly style="font-size:1.3rem; font-weight:bold; background:#fff; border:1px solid #25D366;">
                 <small class="text-muted">Copiez ce code et saisissez-le ci-dessous</small>
             </div>
-
             <div class="code-container">
                 <input type="text" class="code-box" maxlength="1" oninput="moveToNext(this,0)">
                 <input type="text" class="code-box" maxlength="1" oninput="moveToNext(this,1)">
@@ -203,18 +198,15 @@
                 <input type="text" class="code-box" maxlength="1" oninput="moveToNext(this,4)">
                 <input type="text" class="code-box" maxlength="1" oninput="moveToNext(this,5)">
             </div>
-
             <div class="timer-container">
                 <i class="fas fa-clock fa-2x text-success"></i>
                 <span class="fw-bold" id="countdown">02:00</span>
                 <button class="btn btn-sm btn-link text-success" onclick="renvoyerCode()">Renvoyer</button>
             </div>
-
             <button class="btn-premium btn-whatsapp mt-2" onclick="verifierCode()"><i class="fas fa-check-circle me-2"></i>Vérifier le code</button>
             <button class="btn-premium btn-outline-whatsapp mt-2" onclick="retourEtape1()">← Modifier le numéro</button>
         </div>
 
-        <!-- ÉTAPE 3 : Succès -->
         <div id="step3" class="step-content text-center py-4">
             <i class="fas fa-check-circle fa-5x text-success mb-3"></i>
             <h3 class="text-success">Connexion réussie !</h3>
@@ -286,6 +278,7 @@
         .catch(() => showError('Erreur connexion'));
     }
 
+    // ✅ FONCTION VERIFIER CODE AVEC LOGS
     function verifierCode() {
         let inputs = document.querySelectorAll('.code-box'), code = ''; 
         inputs.forEach(i => code += i.value);
@@ -298,54 +291,67 @@
         })
         .then(res => res.json())
         .then(data => {
+            // ✅ LOG 1 : Voir ce que le serveur renvoie
+            console.log("📦 Données reçues du serveur :", data);
+            
             if (data.success) {
-                // ✅ Stockage du token et de l'utilisateur
+                // Stockage du token et de l'utilisateur
                 if (data.token) {
                     localStorage.setItem('token', data.token);
-                    console.log('✅ Token stocké:', data.token);
+                    console.log("✅ Token stocké :", data.token);
                 }
                 if (data.user) {
                     localStorage.setItem('user', JSON.stringify(data.user));
-                    console.log('✅ Utilisateur stocké:', data.user);
+                    console.log("✅ Utilisateur stocké :", data.user);
                 }
+                
+                // ✅ LOG 2 : Voir quel rôle est détecté
+                console.log("🎯 Rôle détecté :", data.role);
                 
                 updateSteps(3);
                 
-                // ✅ Redirection selon le rôle
-                setTimeout(() => {
-                    if (data.role === 'patient') {
-                        window.location.href = 'dashboard-patient.html';
-                    } else if (data.role === 'medecin') {
-                        window.location.href = 'dashboard-medecin.html';
-                    } else if (data.role === 'infirmier') {
-                        window.location.href = 'dashboard-infirmier.html';
-                    } else if (data.role === 'administratif') {
-                        window.location.href = 'dashboard-admin.html';
-                    } else if (data.role === 'hotellerie') {
-                        window.location.href = 'hotellerie.html';
-                    } else if (data.role === 'logistique') {
-                        window.location.href = 'stocks.html';
-                    } else if (data.role === 'qualite') {
-                        window.location.href = 'qualite.html';
-                    } else if (data.role === 'voyages') {
-                        window.location.href = 'voyages.html';
-                    } else if (data.role === 'chauffeur') {
-                        window.location.href = 'voyages.html';
-                    } else if (data.role === 'direction') {
-                        window.location.href = 'dashboard-direction.html';
-                    } else if (data.role === 'boss') {
-                        window.location.href = 'dashboard-direction.html';
-                    } else {
-                        window.location.href = 'index.html';
-                    }
+                // ✅ LOG 3 : Voir où on va rediriger
+                let redirectUrl = 'index.html';
+                if (data.role === 'patient') {
+                    redirectUrl = 'dashboard-patient.html';
+                } else if (data.role === 'medecin') {
+                    redirectUrl = 'dashboard-medecin.html';
+                } else if (data.role === 'infirmier') {
+                    redirectUrl = 'dashboard-infirmier.html';
+                } else if (data.role === 'administratif') {
+                    redirectUrl = 'dashboard-admin.html';
+                } else if (data.role === 'hotellerie') {
+                    redirectUrl = 'hotellerie.html';
+                } else if (data.role === 'logistique') {
+                    redirectUrl = 'stocks.html';
+                } else if (data.role === 'qualite') {
+                    redirectUrl = 'qualite.html';
+                } else if (data.role === 'voyages') {
+                    redirectUrl = 'voyages.html';
+                } else if (data.role === 'chauffeur') {
+                    redirectUrl = 'voyages.html';
+                } else if (data.role === 'direction' || data.role === 'boss') {
+                    redirectUrl = 'dashboard-direction.html';
+                } else {
+                    redirectUrl = 'index.html';
+                }
+                
+                console.log("🔀 Redirection vers :", redirectUrl);
+                
+                setTimeout(() => { 
+                    window.location.href = redirectUrl; 
                 }, 2000);
+                
             } else {
                 showError(data.error || 'Code incorrect');
                 inputs.forEach(i => i.value = '');
                 inputs[0].focus();
             }
         })
-        .catch(() => showError('Erreur serveur'));
+        .catch(err => {
+            console.error("❌ Erreur réseau :", err);
+            showError('Erreur serveur');
+        });
     }
 
     function moveToNext(current, idx) { 
