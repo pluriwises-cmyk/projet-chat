@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
             .from('consultation')
             .select(`
                 *,
-                beneficiaire:beneficiaire!inner(
+                beneficiaire!inner(
                     nom,
                     prenom
                 )
@@ -58,7 +58,7 @@ router.get('/details/:id', async (req, res) => {
             .from('consultation')
             .select(`
                 *,
-                beneficiaire:beneficiaire!inner(
+                beneficiaire!inner(
                     nom,
                     prenom
                 )
@@ -83,7 +83,7 @@ router.get('/details/:id', async (req, res) => {
 });
 
 // ============================================
-// GET Consultations d'un médecin spécifique
+// GET Consultations d'un médecin spécifique (CORRIGÉE)
 // ============================================
 router.get('/medecin/:id', async (req, res) => {
     const medecinId = req.params.id;
@@ -97,7 +97,7 @@ router.get('/medecin/:id', async (req, res) => {
             .from('consultation')
             .select(`
                 *,
-                beneficiaire:beneficiaire!inner(
+                beneficiaire!inner(
                     nom,
                     prenom
                 )
@@ -111,9 +111,16 @@ router.get('/medecin/:id', async (req, res) => {
             return res.status(500).json({ error: error.message });
         }
 
-        res.json(data || []);
+        // ✅ Transformation pour ajouter patient_nom et patient_prenom
+        const result = data.map(c => ({
+            ...c,  // Tous les champs existants sont conservés
+            patient_nom: c.beneficiaire?.nom || null,
+            patient_prenom: c.beneficiaire?.prenom || null
+        }));
+
+        res.json(result);
     } catch (err) {
-        console.error('❌ Erreur:', err);
+        console.error('❌ Erreur GET consultations médecin:', err);
         res.status(500).json({ error: err.message });
     }
 });
@@ -133,7 +140,7 @@ router.get('/patient/:id', async (req, res) => {
             .from('consultation')
             .select(`
                 *,
-                beneficiaire:beneficiaire!inner(
+                beneficiaire!inner(
                     nom,
                     prenom
                 )
@@ -184,12 +191,12 @@ router.post('/', async (req, res) => {
             return res.status(404).json({ error: "Patient non trouvé" });
         }
 
-        // ✅ CORRECTION : Vérifier dans la table 'personnel' avec le poste 'medecin'
+        // Vérifier dans la table 'personnel' avec le poste 'medecin'
         const { data: medecin, error: medecinError } = await supabase
-            .from('personnel') // 👈 On vérifie dans la table 'personnel'
+            .from('personnel')
             .select('id_personnel')
             .eq('id_personnel', id_medecin)
-            .eq('poste', 'medecin') // 👈 On vérifie que c'est bien un médecin
+            .eq('poste', 'medecin')
             .maybeSingle();
 
         if (medecinError || !medecin) {
