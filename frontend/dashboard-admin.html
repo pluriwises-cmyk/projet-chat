@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <script src="/js/api.js"></script>
+    <script src="/js/utils.js"></script>
 </head>
 
 <body>
@@ -16,7 +17,7 @@
         <div class="container-fluid px-4">
             <span class="navbar-brand"><i class="fas fa-chart-bar"></i> Espace Administratif</span>
             <div>
-                <span class="text-white me-3">Admin</span>
+                <span class="text-white me-3" id="adminName">Admin</span>
                 <button class="btn btn-light btn-sm" onclick="API.logout()">Déconnexion</button>
             </div>
         </div>
@@ -26,16 +27,21 @@
         <h2 class="mb-4">Tableau de bord administratif</h2>
 
         <div class="quick-actions-grid">
-            <div class="quick-action-card" onclick="window.location.href='admin/admissions.html'"><i
-                    class="fas fa-user-plus"></i><span>Admissions</span></div>
-            <div class="quick-action-card" onclick="window.location.href='admin/facturation.html'"><i
-                    class="fas fa-file-invoice"></i><span>Facturation</span></div>
-            <div class="quick-action-card" onclick="window.location.href='admin/dossiers.html'"><i
-                    class="fas fa-folder-open"></i><span>Dossiers</span></div>
-            <div class="quick-action-card" onclick="window.location.href='admin/rendezvous.html'"><i
-                    class="fas fa-calendar-check"></i><span>Rendez-vous</span></div>
-            <div class="quick-action-card" onclick="window.location.href='personnel.html'"><i
-                    class="fas fa-users"></i><span>Personnel</span></div>
+            <div class="quick-action-card" onclick="window.location.href='admin/admissions.html'">
+                <i class="fas fa-user-plus"></i><span>Admissions</span>
+            </div>
+            <div class="quick-action-card" onclick="window.location.href='admin/facturation.html'">
+                <i class="fas fa-file-invoice"></i><span>Facturation</span>
+            </div>
+            <div class="quick-action-card" onclick="window.location.href='admin/dossiers.html'">
+                <i class="fas fa-folder-open"></i><span>Dossiers</span>
+            </div>
+            <div class="quick-action-card" onclick="window.location.href='admin/rendezvous.html'">
+                <i class="fas fa-calendar-check"></i><span>Rendez-vous</span>
+            </div>
+            <div class="quick-action-card" onclick="window.location.href='personnel.html'">
+                <i class="fas fa-users"></i><span>Personnel</span>
+            </div>
             <div class="quick-action-card" onclick="window.location.href='ajout-patient.html'">
                 <i class="fas fa-user-plus"></i>
                 <span>Nouveau patient</span>
@@ -60,40 +66,121 @@
     </div>
 
     <script>
+        // ===== RÉCUPÉRER LE NOM DE L'ADMIN DEPUIS LE TOKEN =====
+        (function afficherNomAdmin() {
+            const token = localStorage.getItem('token');
+            if (token) {
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    const prenom = payload.prenom || '';
+                    const nom = payload.nom || '';
+                    document.getElementById('adminName').textContent = prenom + ' ' + nom || 'Admin';
+                } catch (e) {
+                    console.error('Erreur parsing token', e);
+                }
+            }
+        })();
+
+        // ===== CHARGEMENT DES DONNÉES =====
         (async function () {
-    try {
-        // 1. Récupérer les vraies statistiques
-        const stats = await API.getStats();
+            const token = localStorage.getItem('token');
+            if (!token) {
+                window.location.href = 'index.html';
+                return;
+            }
 
-        // 2. Récupérer les vraies factures (avec jointure)
-        const factures = await API.getFactures();
+            try {
+                const stats = await API.getStats();
+                const factures = await API.getFactures();
 
-        // Affichage des stats
-        document.getElementById('statsRow').innerHTML = `
-            <div class="col-md-3"><div class="stat-card"><div class="stat-value">${stats.admissions_jour || 0}</div><div class="stat-label">Admissions</div></div></div>
-            <div class="col-md-3"><div class="stat-card" style="border-left-color:#f39c12;"><div class="stat-value">${stats.rdv_attente || 0}</div><div class="stat-label">RDV en attente</div></div></div>
-            <div class="col-md-3"><div class="stat-card" style="border-left-color:#e74c3c;"><div class="stat-value">${stats.factures_impayees || 0}</div><div class="stat-label">Factures</div></div></div>
-            <div class="col-md-3"><div class="stat-card" style="border-left-color:#27ae60;"><div class="stat-value">${stats.personnel_actif || 28}</div><div class="stat-label">Personnel</div></div></div>
-        `;
+                // ========== STATS ==========
+                document.getElementById('statsRow').innerHTML = `
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.admissions_jour || 0}</div>
+                            <div class="stat-label">Admissions</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="border-left-color:#f39c12;">
+                            <div class="stat-value">${stats.rdv_attente || 0}</div>
+                            <div class="stat-label">RDV en attente</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="border-left-color:#e74c3c;">
+                            <div class="stat-value">${stats.factures_impayees || 0}</div>
+                            <div class="stat-label">Factures impayées</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="border-left-color:#27ae60;">
+                            <div class="stat-value">${stats.personnel_actif || 0}</div>
+                            <div class="stat-label">Personnel</div>
+                        </div>
+                    </div>
+                `;
 
-        // Affichage des factures
-        const container = document.getElementById('facturesContainer');
-        if (factures && factures.length) {
-            container.innerHTML = factures.map(f => `
-                <div class="consultation-card" style="border-left-color:#e74c3c;">
-                    <strong>Facture #${f.id_facture}</strong> – ${f.nom} ${f.prenom}<br>
-                    <span class="text-muted">Montant : ${f.montant_ttc || f.montant} DA</span><br>
-                    <span class="badge-custom badge-${f.statut === 'payee' ? 'success' : 'warning'}">${f.statut}</span>
-                </div>
-            `).join('');
-        } else {
-            container.innerHTML = '<p class="text-muted text-center">Aucune facture trouvée</p>';
+                // ========== FACTURES ==========
+                afficherListe(
+                    'facturesContainer',
+                    factures,
+                    formaterFacture,
+                    (f) => `
+                        <div class="consultation-card" style="border-left-color: ${f.statut === 'payee' ? '#27ae60' : '#e74c3c'};">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>Facture #${f.numero}</strong>
+                                    <span class="badge-custom badge-${f.statutBadge} ms-2">${f.statut}</span>
+                                </div>
+                                <small class="text-muted">${f.date}</small>
+                            </div>
+                            <div class="mt-2">
+                                <div><i class="fas fa-user me-2"></i>Patient: ${f.patientPrenom} ${f.patient}</div>
+                                <div><i class="fas fa-money-bill me-2"></i>Montant: ${f.montant.toLocaleString()} FCFA</div>
+                            </div>
+                            ${f.statut === 'payee' ? '' : `
+                                <div class="mt-2">
+                                    <button class="btn btn-sm btn-outline-success" onclick="marquerPayee(${f.id})">
+                                        <i class="fas fa-check me-1"></i>Marquer payée
+                                    </button>
+                                </div>
+                            `}
+                        </div>
+                    `
+                );
+
+            } catch (e) {
+                console.error('❌ Erreur chargement admin :', e);
+                document.getElementById('facturesContainer').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Erreur lors du chargement des données.
+                        <br><small class="text-muted">${e.message || ''}</small>
+                    </div>
+                `;
+            }
+        })();
+
+        // ============================================
+        // FONCTION M ARQUER PAYÉE
+        // ============================================
+        async function marquerPayee(id) {
+            if (!confirm('Confirmer le paiement de cette facture ?')) return;
+
+            try {
+                const result = await API.patch(`/factures/${id}/statut`, { statut: 'payee' });
+                if (result.success) {
+                    alert('Facture marquée comme payée');
+                    window.location.reload();
+                } else {
+                    alert('Erreur lors de la mise à jour');
+                }
+            } catch (e) {
+                console.error('❌ Erreur :', e);
+                alert('Erreur lors de la mise à jour');
+            }
         }
-
-    } catch (e) {
-        console.error('Erreur chargement admin :', e);
-    }
-})();
     </script>
 </body>
 
