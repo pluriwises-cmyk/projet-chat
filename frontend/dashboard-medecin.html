@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="js/api.js"></script>
+    <script src="js/utils.js"></script>
 </head>
 
 <body>
@@ -93,7 +94,7 @@
                     return;
                 }
 
-                medecinId = payload.id; // ✅ Récupération de l'ID du médecin
+                medecinId = payload.id;
 
                 if (payload.nom && payload.prenom) {
                     document.getElementById('doctorName').textContent = `Dr. ${payload.prenom} ${payload.nom}`;
@@ -106,16 +107,11 @@
 
             // ========== CHARGEMENT DES DONNÉES ==========
             try {
-                // ✅ Récupération des stats du médecin
                 const stats = await API.getStatsMedecin(medecinId);
-
-                // ✅ Récupération des consultations avec l'ID du médecin
                 const consultations = await API.getConsultations(medecinId);
-
-                // ✅ Récupération des rendez-vous avec l'ID du médecin
                 const rdvs = await API.getRendezVous(medecinId);
 
-                // Affichage des stats
+                // ========== STATS ==========
                 const statsRow = document.getElementById('statsRow');
                 statsRow.innerHTML = `
                     <div class="col-md-3">
@@ -132,34 +128,34 @@
                     </div>
                 `;
 
-                // ✅ Affichage des consultations (corrigé)
-                const consContainer = document.getElementById('consultationsContainer');
-                if (consultations && consultations.length) {
-                    consContainer.innerHTML = consultations.map(c => `
+                // ========== CONSULTATIONS ==========
+                afficherListe(
+                    'consultationsContainer',
+                    consultations,
+                    formaterConsultation,
+                    (f) => `
                         <div class="consultation-card">
-                            <div><strong>${new Date(c.date_heure).toLocaleString()}</strong></div>
-                            <div>Patient : ${c.beneficiaire?.nom || '?'} ${c.beneficiaire?.prenom || '?'}</div>
-                            <div class="text-muted">Motif : ${c.motif || 'Non précisé'}</div>
-                            <span class="badge-custom badge-${c.statut === 'realisee' ? 'success' : 'warning'}">${c.statut || 'planifiée'}</span>
+                            <div><strong>${f.date}</strong></div>
+                            <div>Patient : ${f.patient.prenom} ${f.patient.nom}</div>
+                            <div class="text-muted">Motif : ${f.motif}</div>
+                            <span class="badge-custom badge-${f.statutBadge}">${f.statut}</span>
                         </div>
-                    `).join('');
-                } else {
-                    consContainer.innerHTML = '<p class="text-center text-muted">Aucune consultation récente</p>';
-                }
+                    `
+                );
 
-                // ✅ Affichage des rendez-vous (corrigé)
-                const rdvContainer = document.getElementById('rdvContainer');
-                if (rdvs && rdvs.length) {
-                    rdvContainer.innerHTML = rdvs.map(r => `
+                // ========== RENDEZ-VOUS ==========
+                afficherListe(
+                    'rdvContainer',
+                    rdvs,
+                    formaterRendezVous,
+                    (f) => `
                         <div class="consultation-card">
-                            <div><strong>${new Date(r.date_rdv).toLocaleString()}</strong> - ${r.beneficiaire?.nom || '?'} ${r.beneficiaire?.prenom || '?'}</div>
-                            <div class="text-muted">Motif : ${r.motif || 'Consultation'}</div>
-                            <span class="badge-custom badge-${r.statut === 'confirmé' ? 'success' : 'warning'}">${r.statut || 'planifié'}</span>
+                            <div><strong>${f.date}</strong> - ${f.patient.prenom} ${f.patient.nom}</div>
+                            <div class="text-muted">Motif : ${f.motif}</div>
+                            <span class="badge-custom badge-${f.statutBadge}">${f.statut}</span>
                         </div>
-                    `).join('');
-                } else {
-                    rdvContainer.innerHTML = '<p class="text-center text-muted">Aucun rendez-vous prévu</p>';
-                }
+                    `
+                );
 
             } catch (e) {
                 console.error('Erreur chargement dashboard médecin :', e);
