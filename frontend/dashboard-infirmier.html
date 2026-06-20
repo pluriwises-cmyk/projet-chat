@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <script src="/js/api.js"></script>
+    <script src="/js/utils.js"></script>
 </head>
 
 <body>
@@ -16,7 +17,6 @@
         <div class="container-fluid px-4">
             <span class="navbar-brand"><i class="fas fa-user-nurse"></i> Espace Infirmier</span>
             <div>
-                <!-- Nom dynamique de l'infirmier -->
                 <span class="text-white me-3" id="infirmierName">Inf. Chargement...</span>
                 <button class="btn btn-light btn-sm" onclick="API.logout()">Déconnexion</button>
             </div>
@@ -53,9 +53,7 @@
             </div>
         </div>
 
-        <div class="row mb-4" id="statsRow">
-            <!-- injecté par JS -->
-        </div>
+        <div class="row mb-4" id="statsRow"></div>
 
         <div class="card-custom">
             <div class="card-header-custom">
@@ -87,35 +85,61 @@
         // ===== CHARGEMENT DES DONNÉES =====
         (async function () {
             try {
-                // 1. Récupérer les vraies statistiques
                 const stats = await API.getStats();
-
-                // 2. Récupérer les vraies constantes (avec jointure)
                 const constantes = await API.getConstantes();
 
-                // Affichage des stats
+                // ========== STATS ==========
                 document.getElementById('statsRow').innerHTML = `
-                    <div class="col-md-3"><div class="stat-card"><div class="stat-value">${stats.patients_assignes || 0}</div><div class="stat-label">Assignés</div></div></div>
-                    <div class="col-md-3"><div class="stat-card" style="border-left-color:#f39c12;"><div class="stat-value">${stats.soins_attente || 0}</div><div class="stat-label">Soins en attente</div></div></div>
-                    <div class="col-md-3"><div class="stat-card" style="border-left-color:#3498db;"><div class="stat-value">${stats.medicaments_jour || 0}</div><div class="stat-label">Médicaments</div></div></div>
-                    <div class="col-md-3"><div class="stat-card" style="border-left-color:#27ae60;"><div class="stat-value">${stats.constantes_jour || 0}</div><div class="stat-label">Constantes</div></div></div>
+                    <div class="col-md-3">
+                        <div class="stat-card">
+                            <div class="stat-value">${stats.patients_assignes || 0}</div>
+                            <div class="stat-label">Assignés</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="border-left-color:#f39c12;">
+                            <div class="stat-value">${stats.soins_attente || 0}</div>
+                            <div class="stat-label">Soins en attente</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="border-left-color:#3498db;">
+                            <div class="stat-value">${stats.medicaments_jour || 0}</div>
+                            <div class="stat-label">Médicaments</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="stat-card" style="border-left-color:#27ae60;">
+                            <div class="stat-value">${stats.constantes_jour || 0}</div>
+                            <div class="stat-label">Constantes</div>
+                        </div>
+                    </div>
                 `;
 
-                // Affichage des constantes
-                const container = document.getElementById('patientsContainer');
-                if (constantes && constantes.length) {
-                    container.innerHTML = constantes.map(c => `
+                // ========== PATIENTS SOUS SURVEILLANCE ==========
+                afficherListe(
+                    'patientsContainer',
+                    constantes,
+                    formaterConstante,
+                    (f) => `
                         <div class="consultation-card" style="border-left-color: #16a085;">
-                            <strong>${c.nom} ${c.prenom}</strong> – Ch. ${c.chambre || '?'}<br>
-                            <span class="text-muted">TA: ${c.tension || '?'} | Pouls: ${c.pouls || '?'} | Temp: ${c.temperature || '?'}°C | Sat: ${c.saturation || '?'}%</span>
+                            <strong>${f.patientPrenom} ${f.patient}</strong> – Ch. ${f.chambre || '?'}
+                            <br>
+                            <span class="text-muted">
+                                TA: ${f.tension || '?'} | Pouls: ${f.pouls || '?'} | 
+                                Temp: ${f.temperature || '?'}°C | Sat: ${f.saturation || '?'}%
+                            </span>
+                            <br>
+                            <small class="text-muted">Dernière prise : ${f.date}</small>
                         </div>
-                    `).join('');
-                } else {
-                    container.innerHTML = '<p class="text-muted text-center">Aucun patient sous surveillance</p>';
-                }
+                    `
+                );
 
             } catch (e) {
                 console.error('Erreur chargement infirmier :', e);
+                document.getElementById('patientsContainer').innerHTML = `
+                    <p class="text-danger text-center">Erreur chargement des données</p>
+                `;
             }
         })();
     </script>
