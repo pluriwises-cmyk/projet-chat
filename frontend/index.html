@@ -294,6 +294,94 @@
             outline: none;
             box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
         }
+        /* ===== BULLE D'INFORMATION ANIMÉE ===== */
+.info-bubble {
+    background: rgba(255, 255, 255, 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: 16px;
+    padding: 16px 24px;
+    margin: 16px 0 24px;
+    color: white;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    position: relative;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+    max-width: 100%;
+}
+
+.info-bubble i {
+    font-size: 1.4rem;
+    margin-top: 2px;
+    flex-shrink: 0;
+    color: #ffd700;
+}
+
+.info-bubble span {
+    flex: 1;
+    line-height: 1.6;
+}
+
+.info-bubble .btn-close-bubble {
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0 4px;
+    transition: 0.3s;
+    flex-shrink: 0;
+}
+
+.info-bubble .btn-close-bubble:hover {
+    color: white;
+    transform: rotate(90deg);
+}
+
+/* Animation d'entrée */
+@keyframes slideDownFade {
+    0% {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.animate-bubble {
+    animation: slideDownFade 0.6s ease-out forwards;
+}
+
+/* Animation de pulsation douce */
+@keyframes pulseGlow {
+    0%, 100% {
+        box-shadow: 0 8px 32px rgba(255, 215, 0, 0.15);
+    }
+    50% {
+        box-shadow: 0 8px 48px rgba(255, 215, 0, 0.30);
+    }
+}
+
+.info-bubble {
+    animation: slideDownFade 0.6s ease-out forwards, pulseGlow 3s ease-in-out infinite 0.6s;
+}
+
+/* Version mobile */
+@media (max-width: 576px) {
+    .info-bubble {
+        font-size: 0.85rem;
+        padding: 12px 16px;
+        flex-wrap: wrap;
+    }
+    .info-bubble i {
+        font-size: 1.2rem;
+    }
+}
     </style>
 </head>
 <body>
@@ -572,6 +660,27 @@
         const selected = document.querySelector('.profil-option.selected');
         return selected ? selected.getAttribute('data-role') : 'medecin';
     }
+
+    // ✅ Fermer la bulle d'information
+function fermerBulle() {
+    const bubble = document.getElementById('infoBubble');
+    if (bubble) {
+        bubble.style.transition = 'opacity 0.4s ease, transform 0.4s ease';
+        bubble.style.opacity = '0';
+        bubble.style.transform = 'translateY(-20px) scale(0.95)';
+        setTimeout(() => {
+            bubble.style.display = 'none';
+        }, 400);
+    }
+}
+
+// ✅ La bulle se ferme automatiquement après 15 secondes
+setTimeout(() => {
+    const bubble = document.getElementById('infoBubble');
+    if (bubble && !bubble.style.display || bubble.style.display !== 'none') {
+        fermerBulle();
+    }
+}, 15000);
 
     function fillDemoAccount() {
         const val = document.getElementById('demoAccountSelect').value;
